@@ -118,8 +118,7 @@ public class ShaderProgram {
 	 */
 
 	public static void updateModel() {
-		int modelLoc = glGetUniformLocation(ShaderProgram.ID, "model");
-		glUniformMatrix4fv(modelLoc, false, model.get(new float[16]));
+		setMat4("model", model);
 	}
 	
 	/**
@@ -130,6 +129,19 @@ public class ShaderProgram {
 	public static void updateTransform() {
 		int transformLoc = glGetUniformLocation(ShaderProgram.ID, "transform");
 		glUniformMatrix4fv(transformLoc, false, transform.get(new float[16]));
+	}
+
+	public static void addTransform(Matrix4f t) {
+		t.get(ShaderProgram.model);
+	}
+
+	public static void resetTransform() {
+		transform.identity();
+		setMat4("transform", transform);
+	}
+
+	public static void addModel(Matrix4f m) {
+		m.get(ShaderProgram.model);
 	}
 
 	private static String load(String filePath) {

@@ -2,6 +2,8 @@ package com.zerologic.pong.engine;
 
 import com.zerologic.pong.engine.components.GameObject;
 import com.zerologic.pong.engine.components.Renderer;
+import com.zerologic.pong.engine.components.text.FontLoader;
+import com.zerologic.pong.engine.components.text.Text;
 import org.joml.Vector2f;
 import org.lwjgl.opengl.*;
 import static org.lwjgl.opengl.GL46.*;
@@ -40,6 +42,10 @@ public class Game {
 	GameObject paddle2;
 	GameObject ball;
 
+	// Text objects
+	Text p1pts, p2pts;
+
+	// Game attributes
 	float paddle1Speed = 1000;
 	float paddle2Speed = 1000;
 
@@ -82,8 +88,8 @@ public class Game {
 		GL.createCapabilities();
 
 		ShaderProgram.init();
-		
-		
+		FontLoader.init("./res/font/arial.png", "./res/font/arial.fnt", false);
+
 		// Callback for any key events that don't need to be constantly and instantly
 		// updated, this is good for single key-press events.
 		glfwSetKeyCallback(window, (window, key, scancode, action, mods) -> {
@@ -152,6 +158,13 @@ public class Game {
 		
 		ball = new GameObject(20.0f, 20.0f);
 		ball.setPos(win_width/2 - ball.size.x / 2, win_height / 2 - ball.size.y / 2);
+
+		// Set text
+		p1pts = new Text(pts_p1, 0, 0, 2);
+		p1pts.setPos(100, 50);
+
+		p2pts = new Text(pts_p2, 0,0, 2);
+		p2pts.setPos((int) win_width - (int) p2pts.lineWidth() - 100, 50);
 		
 		origBallSpeed = ballSpeed;
 	}
@@ -236,10 +249,15 @@ public class Game {
 	
 	void drawGame() {
 		checkBall();
-
 		Renderer.draw(paddle1, 1);
 		Renderer.draw(paddle2, 1);
 		Renderer.draw(ball, 1);
+
+		Renderer.draw(p1pts);
+		Renderer.draw(p2pts);
+
+		p1pts.updateText(pts_p1);
+		p2pts.updateText(pts_p2);
 	}
 	
 	void drawPause() {
@@ -247,8 +265,7 @@ public class Game {
 		Renderer.draw(quitButton, 1.0f);
 	}
 	
-	void drawWin()
-	{
+	void drawWin()	{
 		Renderer.draw(quitButton, 1.0f);
 	}
 	

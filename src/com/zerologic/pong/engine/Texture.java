@@ -15,10 +15,13 @@ import java.nio.*;
  */
 
 public class Texture {
-	public IntBuffer width      = BufferUtils.createIntBuffer(1);
-	public IntBuffer height     = BufferUtils.createIntBuffer(1);
+	private IntBuffer wbuffer   = BufferUtils.createIntBuffer(1);
+	private IntBuffer hbuffer   = BufferUtils.createIntBuffer(1);
 	public final IntBuffer comp = BufferUtils.createIntBuffer(1);
 	public final ByteBuffer data;
+
+	public int width;
+	public int height;
 
 	int textureID;
 
@@ -38,14 +41,23 @@ public class Texture {
 		glBindTexture(GL_TEXTURE_2D, textureID);
 
 		stbi_set_flip_vertically_on_load(flipImageOnLoad);
-		data = stbi_load(filepath, this.width, this.height, this.comp, 0);
+		data = stbi_load(filepath, this.wbuffer, this.hbuffer, this.comp, 0);
+
+		width = wbuffer.get(0);
+		height = hbuffer.get(0);
+
+		wbuffer.position(0);
+		hbuffer.position(0);
+
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-		glTexImage2D(GL_TEXTURE_2D, 0, type, width.get(), height.get(), 0, type, GL_UNSIGNED_BYTE, data);
+		glTexImage2D(GL_TEXTURE_2D, 0, type, wbuffer.get(), hbuffer.get(), 0, type, GL_UNSIGNED_BYTE, data);
 		glGenerateMipmap(GL_TEXTURE_2D);
 
 		stbi_image_free(data);
