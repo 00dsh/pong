@@ -1,172 +1,140 @@
 package com.zerologic.pong.engine;
 
-import static org.lwjgl.opengl.GL46.*;
-
-import java.io.*;
-
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
 
-/**
- * The {@code ShaderProgram} class that organizes and has all functions
- * pertaining to the shaders. Handles loading as well as compilation and linking
- * of the shaders.
- * 
- * @author Dilan Shabani
- */
+import java.io.BufferedReader;
+import java.io.FileReader;
+
+import static org.lwjgl.opengl.GL40.*;
 
 public class ShaderProgram {
 
-	// Creating handles/IDs for the shaders + program
-	static int vertexShader;
-	static int fragmentShader;
-	public static int ID;
-	
-	// Load the shader source files into the strings to be read.
-	static String vertexShaderSource   = ShaderProgram.load("./res/shaders/vertex.vs");
-	static String fragmentShaderSource = ShaderProgram.load("./res/shaders/fragment.fs");
+	int ID; // Program handle
 
-	// Matrices for view transforms and vertex transformations.
-	public static Matrix4f projection = new Matrix4f();
-	public static Matrix4f model      = new Matrix4f();
-	public static Matrix4f transform  = new Matrix4f();
+	int vertexShader; // Vertex shader handle
+	String vertexShaderSource;
 
-	static int status;
+	int fragmentShader; // Fragment shader handle
+	String fragmentShaderSource;
 
-	/**
-	 * The {@code init()} function initializes, creates and compiles the given
-	 * shaders, which then also creates the shader program to link and run these
-	 * shaders.
-	 */
+	// Matrices for vertices drawn
+	public Matrix4f projection = new Matrix4f();
+	public Matrix4f model      = new Matrix4f();
+	public Matrix4f transform  = new Matrix4f();
 
-	public static void init() {
-		// Creation and compilation of the shaders.
-		vertexShader = glCreateShader(GL_VERTEX_SHADER);
-		glShaderSource(vertexShader, vertexShaderSource);
-		glCompileShader(vertexShader);
+	public ShaderProgram(String vertPath, String fragPath) {
+		vertexShaderSource = ShaderProgram.readStringFromFile(vertPath);
+		fragmentShaderSource = ShaderProgram.readStringFromFile(fragPath);
 
-		status = glGetShaderi(vertexShader, GL_COMPILE_STATUS);
+		init();
+	}
 
-		if (status != 1)
-			System.err.println("Vertex shader compiling error:\n" + glGetShaderInfoLog(vertexShader));
+	private void init() {
+		ID = glCreateProgram(); // Create the shader program
+		vertexShader = glCreateShader(GL_VERTEX_SHADER); // Create the vertex shader
+		fragmentShader = glCreateShader(GL_FRAGMENT_SHADER); // Create the fragment shader
 
-		fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-		glShaderSource(fragmentShader, fragmentShaderSource);
-		glCompileShader(fragmentShader);
+		glShaderSource(vertexShader, vertexShaderSource); // Add shader source to shader
+		glCompileShader(vertexShader); // Compile shader
+		checkShader(vertexShader);
 
-		status = glGetShaderi(fragmentShader, GL_COMPILE_STATUS);
+		glShaderSource(fragmentShader, fragmentShaderSource); // Add shader source to shader
+		glCompileShader(fragmentShader); // Compile shader
+		checkShader(fragmentShader);
 
-		if (status != 1)
-			System.err.println("Fragment shader compiling error:\n" + glGetShaderInfoLog(fragmentShader));
-
-		ID = glCreateProgram();
+		// Attach shaders and link program, then activate it so that we can initialize the matrices
 		glAttachShader(ID, vertexShader);
 		glAttachShader(ID, fragmentShader);
-
 		glLinkProgram(ID);
-		glUseProgram(ID);
 
+		glUseProgram(ID);
+		initMatrices();
+		glUseProgram(0);
+
+		// Delete the shaders as we no longer need them
 		glDeleteShader(vertexShader);
 		glDeleteShader(fragmentShader);
-
-		// Initialize the projection matrix.
-		projection.setOrtho(0.0f, Game.win_width, Game.win_height, 0.0f, -1.0f, 1.0f);
-
-		updateProjection();
-
-		setMat4("projection", projection);
-		setMat4("model", model);
-		setMat4("transform", transform);
-		setVec4("ourColor", new Vector4f(1.0f, 1.0f, 1.0f, 1.0f));
 	}
 
-	/**
-	 * @param uniform  The name of the uniform to be modified.
-	 * @param matrix4f The {@code Matrix4f} to be passed into the program shader so
-	 *                 it can be set/modified.
-	 */
+	public void initMatrices() {
+		// Set up matrices
+		projection.ortho(0.0f, Game.getWinWidth(), Game.getWinHeight(), 0.0f, -1.0f, 1.0f);
 
-	public static void setMat4(String uniform, Matrix4f matrix4f) {
-		int uniformLocation = glGetUniformLocation(ShaderProgram.ID, uniform);
-		glUniformMatrix4fv(uniformLocation, false, matrix4f.get(new float[16]));
+		// Apply to shader program
+		setMatrix4f(projection, "projection");
+		setMatrix4f(model, "model");
+		setMatrix4f(transform, "transform");
 	}
 
-	/**
-	 * @param uniform  The name of the uniform to be modified.
-	 * @param vector4f The {@code Vector4f} to be passed into the shader program so
-	 *                 it can be set/modified.
-	 */
-	
-	public static void setVec4(String uniform, Vector4f vector4f) {
-		int uniformLocation = glGetUniformLocation(ShaderProgram.ID, uniform);
-		glUniform4f(uniformLocation, vector4f.x, vector4f.y, vector4f.z, vector4f.w);
+	public void setModel(Matrix4f m) {
+		m.get(this.model);
 	}
 
-	/**
-	 * Updates the projection matrix, this method is usually called after
-	 * modification to the matrix.
-	 */
-	
-	public static void updateProjection() {
-		int projectionLoc = glGetUniformLocation(ShaderProgram.ID, "projection");
-		glUniformMatrix4fv(projectionLoc, false, projection.get(new float[16]));
-	}
-	
-	/**
-	 * Updates the model matrix, this method is usually called after
-	 * modification to the matrix.
-	 */
-
-	public static void updateModel() {
-		setMat4("model", model);
-	}
-	
-	/**
-	 * Updates the transform matrix, this method is usually called after
-	 * modification to the matrix.
-	 */
-
-	public static void updateTransform() {
-		int transformLoc = glGetUniformLocation(ShaderProgram.ID, "transform");
-		glUniformMatrix4fv(transformLoc, false, transform.get(new float[16]));
+	public void setTransform(Matrix4f t) {
+		t.get(this.model);
 	}
 
-	public static void addTransform(Matrix4f t) {
-		t.get(ShaderProgram.model);
+	public void updateModel() {
+		setMatrix4f(this.model, "model");
 	}
 
-	public static void resetTransform() {
-		transform.identity();
-		setMat4("transform", transform);
+	public void updateTransform() {
+		setMatrix4f(this.transform, "transform");
 	}
 
-	public static void addModel(Matrix4f m) {
-		m.get(ShaderProgram.model);
+	public void resetModel() {
+		this.model.identity();
+		setMatrix4f(this.model, "model");
 	}
 
-	private static String load(String filePath) {
+	public void resetTransform() {
+		this.transform.identity();
+		setMatrix4f(this.transform, "transform");
+	}
+
+	public void use() {
+		glUseProgram(this.ID);
+	}
+
+	public static void use(int id) {
+		glUseProgram(id);
+	}
+
+	public void setMatrix4f(Matrix4f matrix, String query) {
+		int loc = glGetUniformLocation(this.ID, query);
+		glUniformMatrix4fv(loc, false, matrix.get(new float[16]));
+	}
+
+	public void setVector4f(Vector4f vec, String query) {
+		int loc = glGetUniformLocation(this.ID, query);
+		glUniform4f(loc, vec.x(), vec.y(), vec.z(), vec.w());
+	}
+
+	private void checkShader(int shader) {
+		int status = glGetShaderi(shader, GL_COMPILE_STATUS);
+		if (status != 1) {
+			System.err.println("Status: " + status + " Info log: " + glGetShaderInfoLog(shader));
+		}
+	}
+
+	private static String readStringFromFile(String filePath) {
+
 		try {
-			File shaderFile = new File(filePath);
-			FileReader reader = new FileReader(shaderFile);
-			BufferedReader bufReader = new BufferedReader(reader);
-
+			BufferedReader reader = new BufferedReader(new FileReader(filePath));
 			StringBuilder sb = new StringBuilder();
 
-			String store;
-			while ((store = bufReader.readLine()) != null) {
+			String store = "";
+
+			while((store = reader.readLine()) != null) {
 				sb.append(store + "\r\n");
 			}
+			return sb.toString();
 
-			String result = sb.toString();
-			bufReader.close();
-
-			return result;
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 
-		catch (Exception e) {
-			System.err.print("Error finding file: " + e);
-		}
-
-		return null;
+		return "An error occurred.";
 	}
 }

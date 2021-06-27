@@ -2,8 +2,9 @@ package com.zerologic.pong.engine;
 
 import com.zerologic.pong.engine.components.GameObject;
 import com.zerologic.pong.engine.components.Renderer;
-import com.zerologic.pong.engine.components.text.FontLoader;
-import com.zerologic.pong.engine.components.text.Text;
+
+import com.zerologic.pong.engine.components.gui.uitext.UIFontLoader;
+import com.zerologic.pong.engine.components.gui.uitext.UIText;
 import org.joml.Vector2f;
 import org.lwjgl.opengl.*;
 import static org.lwjgl.opengl.GL46.*;
@@ -12,20 +13,22 @@ import static org.lwjgl.system.MemoryUtil.*;
 
 import java.util.Random;
 
-
 /**
  * @author Dilan Shabani
- * @version 1.0
+ * @version 0.3a
  * @since 12/2/2020
  */
 
 public class Game {
 
 	// Window handle + variables
-	public static long window;
-	static float win_width = 1280.0f;
-	static float win_height = 720.0f;
-	String win_title = "PONG";
+	private static long window;
+	private final static float win_width = 1280.0f;
+	private final static float win_height = 720.0f;
+	private final static String win_title = "PONG";
+
+	private static ShaderProgram program;
+	private static ShaderProgram textShader;
 	
 	// Mouse position vector
 	Vector2f m_pos = new Vector2f();
@@ -43,17 +46,22 @@ public class Game {
 	GameObject ball;
 
 	// Text objects
-	Text p1pts, p2pts;
+	UIText text_pts_p1;
+	UIText text_pts_p2;
+
+	UIText speed;
 
 	// Game attributes
-	float paddle1Speed = 1000;
-	float paddle2Speed = 1000;
+	float paddle1Speed = 1000f;
+	float paddle2Speed = 1000f;
 
 	int ballDirection = -1;
 	int dirToServe = 1;
+
 	float ballSpeed = 500.0f;
 	float ballIncSpeed = 50.0f;
 	float ballAngle = 45.0f;
+
 	int ballIncAngle;
 	int maxRandomAngle = 30;
 	
@@ -77,18 +85,22 @@ public class Game {
 	void init() {
 		glfwInit();
 
-		window = glfwCreateWindow((int) win_width, (int) win_height, win_title, NULL, NULL);
+		window = glfwCreateWindow((int)win_width, (int)win_height, win_title, NULL, NULL);
 		glfwMakeContextCurrent(window);
 
 		glfwWindowHint(GLFW_VERSION_MAJOR, 3);
 		glfwWindowHint(GLFW_VERSION_MINOR, 3);
 		glfwWindowHint(GLFW_VERSION_REVISION, 2);
 		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+		glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
 
 		GL.createCapabilities();
 
-		ShaderProgram.init();
-		FontLoader.init("./res/font/arial.png", "./res/font/arial.fnt", false);
+		// Load shader programs (create the main program last to avoid an unnecessary use() call)
+		textShader = new ShaderProgram("./res/shaders/textVert.glsl", "./res/shaders/textFrag.glsl");
+		program = new ShaderProgram("./res/shaders/vertex.glsl", "./res/shaders/fragment.glsl");
+
+		UIFontLoader.init(textShader, "C:/Windows/Fonts/Arial.ttf"); // Initialize font loader
 
 		// Callback for any key events that don't need to be constantly and instantly
 		// updated, this is good for single key-press events.
@@ -124,9 +136,7 @@ public class Game {
 			}
 		});
 		
-		glfwSetWindowSizeCallback(window, (window, width, height) -> {
-			glViewport(0, 0, width, height);
-		});
+		glfwSetWindowSizeCallback(window, (window, width, height) -> glViewport(0, 0, width, height));
 		
 		// GameObjects for the menu
 		logo = new GameObject(600.0f, 200.0f);
@@ -155,24 +165,29 @@ public class Game {
 		
 		paddle2 = new GameObject(25.0f, 200.0f);
 		paddle2.setPos(1280.0f - paddle2.size.x - 50.0f, (720f / 2f) - paddle2.size.y/2.0f);
+
 		
 		ball = new GameObject(20.0f, 20.0f);
 		ball.setPos(win_width/2 - ball.size.x / 2, win_height / 2 - ball.size.y / 2);
 
-		// Set text
-		p1pts = new Text(pts_p1, 0, 0, 2);
-		p1pts.setPos(100, 50);
+		text_pts_p1 = new UIText(pts_p1, 90f, 0f, 0f);
+		text_pts_p1.setColor(1f, 1f, 1f, 1f);
 
-		p2pts = new Text(pts_p2, 0,0, 2);
-		p2pts.setPos((int) win_width - (int) p2pts.lineWidth() - 100, 50);
-		
+		text_pts_p2 = new UIText(pts_p2, 50f, 1200f, 0f);
+		text_pts_p2.setColor(1f, 1f, 1f, 1f);
+
+		speed = new UIText(ballSpeed, 100f,  1280f/2f, 200);
+		speed.setColor(1f, 1f, 1f, 1f);
+
 		origBallSpeed = ballSpeed;
+
+		glfwShowWindow(window);
 	}
 	
 	// Game loop
 	void loop() {
 
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClearColor(0.2f, 0.2f, 0.4f, 1.0f);
 
 		while (!glfwWindowShouldClose(window)) {
 			glClear(GL_COLOR_BUFFER_BIT);
@@ -181,18 +196,24 @@ public class Game {
 			if(pts_p1 == 5 || pts_p2 == 5)
 				state = GAMESTATE.GAME_WIN;
 
-			if (state == GAMESTATE.GAME_ACTIVE)
-				drawGame();
-			
-			else if (state == GAMESTATE.MENU)
-				drawMenu();
-			
-			else if (state == GAMESTATE.PAUSED)
-				drawPause();
-			
-			else if(state == GAMESTATE.GAME_WIN)
-				drawWin();
-			
+			switch (state) {
+				case GAME_ACTIVE:
+					drawGame();
+					break;
+
+				case MENU:
+					drawMenu();
+					break;
+
+				case PAUSED:
+					drawPause();
+					break;
+
+				case GAME_WIN:
+					drawWin();
+					break;
+			}
+
 			Time.calcTime();
 			processInput();
 			glfwPollEvents();
@@ -253,11 +274,14 @@ public class Game {
 		Renderer.draw(paddle2, 1);
 		Renderer.draw(ball, 1);
 
-		Renderer.draw(p1pts);
-		Renderer.draw(p2pts);
+		Renderer.draw(text_pts_p1);
+		Renderer.draw(text_pts_p2);
+		Renderer.draw(speed);
 
-		p1pts.updateText(pts_p1);
-		p2pts.updateText(pts_p2);
+		text_pts_p1.setText(pts_p1);
+		text_pts_p2.setText(pts_p2);
+		speed.setText((int)ballSpeed);
+		speed.setColor(1.0f, 0f, 0f, 1f);
 	}
 	
 	void drawPause() {
@@ -284,9 +308,7 @@ public class Game {
 	void checkBall() {
 		
 		// Check direction of ball via an integer value
-		if (ballDirection == -1) { 
-			ball.pos.x = ball.pos.x;
-		} else if (ballDirection == 0) {
+		if (ballDirection == 0) {
 			ball.pos.x -= ballSpeed * Time.deltaTime;
 			ball.pos.y += Math.cos(ballAngle) * 500 * Time.deltaTime;
 		} else if (ballDirection == 1) {
@@ -367,6 +389,23 @@ public class Game {
 
 	public static void main(String[] args) {
 		new Game().run();
+	}
+
+	// Game accessors
+	public static ShaderProgram getShaderProgram() {
+		return program;
+	}
+
+	public static long getWindow() {
+		return window;
+	}
+
+	public static float getWinWidth() {
+		return win_width;
+	}
+
+	public static float getWinHeight() {
+		return win_height;
 	}
 
 }

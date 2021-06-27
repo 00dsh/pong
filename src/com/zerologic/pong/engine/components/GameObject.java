@@ -2,8 +2,11 @@ package com.zerologic.pong.engine.components;
 
 import static org.lwjgl.opengl.GL46.*;
 
+import com.zerologic.pong.engine.Game;
+import com.zerologic.pong.engine.ShaderProgram;
 import org.joml.Vector2f;
 import com.zerologic.pong.engine.Texture;
+import org.lwjgl.system.CallbackI;
 
 /**
  * 
@@ -16,8 +19,8 @@ public class GameObject {
 	int VAO, VBO, EBO;
 
 	// Size/pos vector
-	public Vector2f pos  = new Vector2f();
-	public Vector2f size = new Vector2f();
+	public Vector2f pos;
+	public Vector2f size;
 
 	// Texture loading
 	Texture texture = new Texture("./res/textures/def.jpg", false, GL_RGB);
@@ -35,9 +38,7 @@ public class GameObject {
 
 	public GameObject(float x, float y, float width, float height) {
 		pos = new Vector2f(x, y);
-
-		size.x = width;
-		size.y = height;
+		size = new Vector2f(width, height);
 		
 		// Vertex data
 		float[] data = {
@@ -85,9 +86,7 @@ public class GameObject {
 	
 	public GameObject(float width, float height) {
 		pos = new Vector2f(0, 0);
-		
-		size.x = width;
-		size.y = height;
+		size = new Vector2f(width, height);
 		
 		// Vertex data
 		float[] data = {
@@ -123,6 +122,7 @@ public class GameObject {
 	}
 
 	protected void draw() {
+		Game.getShaderProgram().use();
 		texture.use();
 		glBindVertexArray(VAO);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
@@ -141,7 +141,7 @@ public class GameObject {
 
 	/**
 	 * @param x The x position to place the {@code GameObject}.
-	 * @param x The y position to place the {@code GameObject}.
+	 * @param y The y position to place the {@code GameObject}.
 	 */
 
 	public void setPos(float x, float y) {
