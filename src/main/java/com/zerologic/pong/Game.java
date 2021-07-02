@@ -99,8 +99,8 @@ public class Game {
 		GL.createCapabilities();
 
 		// Load shader programs (create the main program last to avoid an unnecessary use() call)
-		textShader = new ShaderProgram("./res/shaders/textVert.glsl", "./res/shaders/textFrag.glsl");
-		program = new ShaderProgram("./res/shaders/vertex.glsl", "./res/shaders/fragment.glsl");
+		textShader = new ShaderProgram("./src/main/resources/shaders/textVert.glsl", "./src/main/resources/shaders/textFrag.glsl");
+		program = new ShaderProgram("./src/main/resources/shaders/vertex.glsl", "./src/main/resources/shaders/fragment.glsl");
 
 		UIFontLoader.init(textShader, "C:/Windows/Fonts/Arial.ttf"); // Initialize font loader
 
