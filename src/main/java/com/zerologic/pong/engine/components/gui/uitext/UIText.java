@@ -1,7 +1,6 @@
 package com.zerologic.pong.engine.components.gui.uitext;
 
-import com.zerologic.pong.engine.Game;
-import com.zerologic.pong.engine.ShaderProgram;
+import com.zerologic.pong.Game;
 import org.joml.Vector2f;
 import org.joml.Vector4f;
 import org.lwjgl.stb.*;
@@ -26,6 +25,7 @@ public class UIText {
     private Vector2f pos;
     private float fontSize;
 
+    private Vector2f size;
     private Vector4f color; // RGBA
 
     private int VAO;
@@ -36,6 +36,12 @@ public class UIText {
         0, 1, 3,
         1, 2, 3
     };
+
+    // Used to set position explicitly after creating
+    public UIText(String text, float fontSize) {
+        this.text = text;
+        this.fontSize = fontSize;
+    }
 
     public UIText(String text, float fontSize, float x, float y) {
         this.text = text;
@@ -69,7 +75,6 @@ public class UIText {
         // System.out.println("Ascent: " + STBFontLoader.getAscent() + " Descent: " + -STBFontLoader.getDescent() + " LineGap: " + STBFontLoader.getLineGap());
         // System.out.println("Xpos: " + this.x.get(0) + " Ypos: " + this.y.get(0));
 
-
         // Activate the shader and set the color
         UIFontLoader.getShaderProgram().use();
         UIFontLoader.getShaderProgram().setVector4f(this.color, "color");
@@ -97,6 +102,8 @@ public class UIText {
             bakedChars.add(q);
         }
 
+        size = new Vector2f(bakedChars.lastElement().x1(), fontSize);
+
         VAO = glGenVertexArrays();
         glBindVertexArray(VAO);
 
@@ -115,6 +122,10 @@ public class UIText {
 
     // Draw only code, must set shader in renderer class!
     public void draw() {
+        // Activate text shader to change color of each text object
+        UIFontLoader.getShaderProgram().use();
+        UIFontLoader.getShaderProgram().setVector4f(this.color, "color");
+
         glBindTexture(GL_TEXTURE_2D, UIFontLoader.getFontBySize(fontSize).textureID());
         glBindVertexArray(VAO);
 
@@ -158,23 +169,19 @@ public class UIText {
     }
 
     public void setColor(float r, float g, float b, float a) {
-        // Check if color is the same as current so no need to create a new vec every time
-        if (this.color.x == r && this.color.y == g && this.color.z == b && this.color.w == a)
+        // Check if color isn't the same as current so no need to create a new vec every time
+        if (!(this.color.x == r && this.color.y == g && this.color.z == b && this.color.w == a))
         {
-            return;
-        } else {
             this.color = new Vector4f(r, g, b, a);
             UIFontLoader.getShaderProgram().use();
             UIFontLoader.getShaderProgram().setVector4f(this.color, "color");
-            Game.getShaderProgram().use();
         }
     }
 
     public void setColor(Vector4f color) {
-        if(color.equals(this.color)) {
-            return;
-        } else {
+        if(!color.equals(this.color)) {
             this.color = color;
+            UIFontLoader.getShaderProgram().use();
             UIFontLoader.getShaderProgram().setVector4f(this.color, "color");
         }
     }
@@ -185,6 +192,14 @@ public class UIText {
 
     public float y() {
         return this.pos.y;
+    }
+
+    public float width() {
+        return this.size.x;
+    }
+
+    public float height() {
+        return this.size.y;
     }
 
     public Vector2f pos() {

@@ -1,5 +1,6 @@
 package com.zerologic.pong.engine;
 
+import com.zerologic.pong.Game;
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
 
@@ -124,10 +125,10 @@ public class ShaderProgram {
 			BufferedReader reader = new BufferedReader(new FileReader(filePath));
 			StringBuilder sb = new StringBuilder();
 
-			String store = "";
+			String store;
 
 			while((store = reader.readLine()) != null) {
-				sb.append(store + "\r\n");
+				sb.append(store).append("\r\n");
 			}
 			return sb.toString();
 

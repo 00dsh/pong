@@ -1,5 +1,7 @@
-package com.zerologic.pong.engine;
+package com.zerologic.pong;
 
+import com.zerologic.pong.engine.ShaderProgram;
+import com.zerologic.pong.engine.Time;
 import com.zerologic.pong.engine.components.GameObject;
 import com.zerologic.pong.engine.components.Renderer;
 
@@ -74,10 +76,10 @@ public class Game {
 	Random random = new Random();
 
 	enum GAMESTATE {
-		MENU, 
-		GAME_ACTIVE, 
+		MENU,
+		ACTIVE,
 		PAUSED,
-		GAME_WIN
+		PLAYER_WIN
 	}
 	
 	GAMESTATE state = GAMESTATE.MENU;
@@ -106,8 +108,8 @@ public class Game {
 		// updated, this is good for single key-press events.
 		glfwSetKeyCallback(window, (window, key, scancode, action, mods) -> {
 			if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS && state == GAMESTATE.PAUSED) {
-				state = GAMESTATE.GAME_ACTIVE;
-			} else if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS && state == GAMESTATE.GAME_ACTIVE) {
+				state = GAMESTATE.ACTIVE;
+			} else if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS && state == GAMESTATE.ACTIVE) {
 				state = GAMESTATE.PAUSED;
 			}
 		});
@@ -121,7 +123,7 @@ public class Game {
 		glfwSetMouseButtonCallback(window, (window, button, action, mods) -> {
 			if (state == GAMESTATE.MENU) {
 				if (checkLMB(playButton)) {
-					state = GAMESTATE.GAME_ACTIVE;
+					state = GAMESTATE.ACTIVE;
 				}
 
 				if (checkLMB(quitButton)) {
@@ -165,15 +167,14 @@ public class Game {
 		
 		paddle2 = new GameObject(25.0f, 200.0f);
 		paddle2.setPos(1280.0f - paddle2.size.x - 50.0f, (720f / 2f) - paddle2.size.y/2.0f);
-
 		
 		ball = new GameObject(20.0f, 20.0f);
 		ball.setPos(win_width/2 - ball.size.x / 2, win_height / 2 - ball.size.y / 2);
 
-		text_pts_p1 = new UIText(pts_p1, 90f, 0f, 0f);
+		text_pts_p1 = new UIText("pts_p1", 90f, 0f, 0f);
 		text_pts_p1.setColor(1f, 1f, 1f, 1f);
 
-		text_pts_p2 = new UIText(pts_p2, 50f, 1200f, 0f);
+		text_pts_p2 = new UIText(pts_p2, 90f, text_pts_p1.width(), 0f);
 		text_pts_p2.setColor(1f, 1f, 1f, 1f);
 
 		speed = new UIText(ballSpeed, 100f,  1280f/2f, 200);
@@ -194,24 +195,13 @@ public class Game {
 			
 			// Check for win condition before the game draws a new frame to avoid weird effects
 			if(pts_p1 == 5 || pts_p2 == 5)
-				state = GAMESTATE.GAME_WIN;
+				state = GAMESTATE.PLAYER_WIN;
 
 			switch (state) {
-				case GAME_ACTIVE:
-					drawGame();
-					break;
-
-				case MENU:
-					drawMenu();
-					break;
-
-				case PAUSED:
-					drawPause();
-					break;
-
-				case GAME_WIN:
-					drawWin();
-					break;
+				case ACTIVE -> drawGame();
+				case MENU -> drawMenu();
+				case PAUSED -> drawPause();
+				case PLAYER_WIN -> drawWin();
 			}
 
 			Time.calcTime();
@@ -225,7 +215,7 @@ public class Game {
 		// Player 1
 		if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
 			if (paddle1.pos.y > 0) {
-				paddle1.pos.y -= paddle1Speed * Time.deltaTime;
+				paddle1.pos.y -= paddle1Speed * Time.deltaTimef();
 			} else if (paddle1.pos.y < 0) {
 				paddle1.pos.y = 0;
 			}
@@ -233,7 +223,7 @@ public class Game {
 
 		if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
 			if (paddle1.pos.y < win_height - paddle1.size.y) {
-				paddle1.pos.y += paddle1Speed * Time.deltaTime;
+				paddle1.pos.y += paddle1Speed * Time.deltaTimef();
 			} else if (paddle1.pos.y > win_height - paddle1.size.y) {
 				paddle1.pos.y = win_height - paddle1.size.y;
 			}
@@ -242,7 +232,7 @@ public class Game {
 		// Player 2
 		if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
 			if (paddle2.pos.y > 0) {
-				paddle2.pos.y -= paddle2Speed * Time.deltaTime;
+				paddle2.pos.y -= paddle2Speed * Time.deltaTimef();
 			} else if (paddle2.pos.y < 0) {
 				paddle2.pos.y = 0;
 			}
@@ -250,18 +240,19 @@ public class Game {
 
 		if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
 			if (paddle2.pos.y < win_height - paddle2.size.y) {
-				paddle2.pos.y += paddle2Speed * Time.deltaTime;
+				paddle2.pos.y += paddle2Speed * Time.deltaTimef();
 			} else if (paddle2.pos.y > win_height - paddle2.size.y) {
 				paddle2.pos.y = win_height - paddle2.size.y;
 			}
 		}
 		
-		if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && state == GAMESTATE.GAME_ACTIVE && ballDirection == -1) {
+		if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && state == GAMESTATE.ACTIVE && ballDirection == -1) {
 			ballDirection = dirToServe;
 		}
 	}
 	
 	void drawMenu() {
+		Renderer.draw(new UIText((int)glfwGetTime(), 100f, 0f, 0f));
 		Renderer.draw(logo, 1.0f);
 		Renderer.draw(playButton, 1.0f);
 		Renderer.draw(quitButton, 1.0f);
@@ -278,9 +269,10 @@ public class Game {
 		Renderer.draw(text_pts_p2);
 		Renderer.draw(speed);
 
-		text_pts_p1.setText(pts_p1);
+		//text_pts_p1.setText(pts_p1);
 		text_pts_p2.setText(pts_p2);
 		speed.setText((int)ballSpeed);
+		speed.setPos(1280f/2f - speed.width()/2f, 0f);
 		speed.setColor(1.0f, 0f, 0f, 1f);
 	}
 	
@@ -295,13 +287,11 @@ public class Game {
 	
 	boolean checkLMB(GameObject object) {
 		if (glfwGetMouseButton(window, 0) == GLFW_PRESS) {
-			if(m_pos.x >= object.pos.x && m_pos.x <= object.pos.x + object.size.x) {
-				if(m_pos.y >= object.pos.y && m_pos.y <= object.pos.y + object.size.y) {
+			if(m_pos.x >= object.pos.x && m_pos.x <= object.pos.x + object.size.x
+				&& m_pos.y >= object.pos.y && m_pos.y <= object.pos.y + object.size.y) {
 					return true;
-				}
 			}
 		}
-		
 		return false;
 	}
 	
@@ -309,11 +299,11 @@ public class Game {
 		
 		// Check direction of ball via an integer value
 		if (ballDirection == 0) {
-			ball.pos.x -= ballSpeed * Time.deltaTime;
-			ball.pos.y += Math.cos(ballAngle) * 500 * Time.deltaTime;
+			ball.pos.x -= ballSpeed * Time.deltaTimef();
+			ball.pos.y += Math.cos(ballAngle) * 500 * Time.deltaTimef();
 		} else if (ballDirection == 1) {
-			ball.pos.x += ballSpeed * Time.deltaTime;
-			ball.pos.y += Math.cos(ballAngle) * 500 * Time.deltaTime;
+			ball.pos.x += ballSpeed * Time.deltaTimef();
+			ball.pos.y += Math.cos(ballAngle) * 500 * Time.deltaTimef();
 		}
 		
 		// Ball dynamics
@@ -363,10 +353,9 @@ public class Game {
 	
 	boolean checkCollision(GameObject first, GameObject second) {
 		
-		if(first.pos.x + first.size.x >= second.pos.x && first.pos.x <= second.pos.x + second.size.x) {    	    // Checking for x-axis collision
-			if(first.pos.y + first.size.y >= second.pos.y && first.pos.y <= second.pos.y + second.size.y) { 	// Checking for y-axis collision
-				return true;
-			}
+		if(first.pos.x + first.size.x >= second.pos.x && first.pos.x <= second.pos.x + second.size.x
+			&& first.pos.y + first.size.y >= second.pos.y && first.pos.y <= second.pos.y + second.size.y) {    	    // Checking for x-axis collision
+			return true;
 		}
 		return false;
 	}

@@ -1,5 +1,6 @@
 package com.zerologic.pong.engine.components.gui.uitext;
 
+import org.joml.Vector4f;
 import org.lwjgl.stb.STBTTBakedChar;
 import org.lwjgl.stb.STBTTFontinfo;
 
@@ -7,7 +8,7 @@ public class LoadedFont {
 
     // The LoadedFont class is simply instantiated with a created bitmap, so that any bitmaps
     // that are needed are created and stored in the FontLoader class.
-    // TODO: Get UIFontLoader to create LoadedFonts for every new UIText instantiation
+    // TODO: Get the length for each text object in pixels
 
     private final String path;
     private final float fontSize;
@@ -44,20 +45,20 @@ public class LoadedFont {
     }
 
     public STBTTBakedChar.Buffer getCharData() {
-        return cdata;
+        return this.cdata;
     }
 
-    public float getFontSize() { return fontSize; }
+    public float getFontSize() { return this.fontSize; }
 
-    public int getBmpSize() { return bmpSize; }
+    public int getBmpSize() { return this.bmpSize; }
 
-    public int textureID() { return texture; }
+    public int textureID() { return this.texture; }
 
-    public int ascent() { return ascent; }
+    public int ascent() { return this.ascent; }
 
-    public int descent() { return descent; }
+    public int descent() { return this.descent; }
 
-    public int lineGap() { return lineGap; }
+    public int lineGap() { return this.lineGap; }
 
-    public float scale() { return scale; }
+    public float scale() { return this.scale; }
 }

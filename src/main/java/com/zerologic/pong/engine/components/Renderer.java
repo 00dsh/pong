@@ -1,6 +1,6 @@
 package com.zerologic.pong.engine.components;
 
-import com.zerologic.pong.engine.Game;
+import com.zerologic.pong.Game;
 import com.zerologic.pong.engine.components.gui.uitext.*;
 import org.joml.*;
 
