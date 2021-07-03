@@ -23,7 +23,7 @@ public class UIFontLoader {
     private static STBTTFontinfo fontInfo;
     private static ByteBuffer data; // The buffer to store the font data
     private static ByteBuffer bitmap = BufferUtils.createByteBuffer(bmpSize*bmpSize); // The buffer that has the actual drawn image of the bitmap
-    private static STBTTBakedChar.Buffer cdata = STBTTBakedChar.calloc(96); // Character data from the font, is 96 because the standard range of chars is from 32-96
+    private static STBTTBakedChar.Buffer cdata = STBTTBakedChar.calloc(143); // Character data from the font, is 96 because the standard range of chars is from 32-96, 143 for special chars
 
     private final static String defaultFont = "C:/Windows/Fonts/Arial.ttf"; // To be defined by programmer, this is a font that the loader defaults to if there is not fonts found at the given parameter
     private static String fontPath;

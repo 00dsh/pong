@@ -41,6 +41,10 @@ public class UIText {
     public UIText(String text, float fontSize) {
         this.text = text;
         this.fontSize = fontSize;
+        this.pos = new Vector2f(0f, 0f);
+        this.color = new Vector4f(0.0f, 0.0f, 0.0f, 1.0f); // Set font color to black by default
+
+        init();
     }
 
     public UIText(String text, float fontSize, float x, float y) {
@@ -116,8 +120,6 @@ public class UIText {
 
         glVertexAttribPointer(0, 4, GL_FLOAT, false, 16, 0);
         glEnableVertexAttribArray(0);
-
-        Game.getShaderProgram().use();
     }
 
     // Draw only code, must set shader in renderer class!
@@ -195,8 +197,8 @@ public class UIText {
     }
 
     public float width() {
-        return this.size.x;
-    }
+        return this.size.x + 3f;
+    } // Add padding to the right of 3 pixels
 
     public float height() {
         return this.size.y;

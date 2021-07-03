@@ -21,7 +21,7 @@ public class GameObject {
 	public Vector2f size;
 
 	// Texture loading
-	Texture texture = new Texture("./res/textures/def.jpg", false, GL_RGB);
+	Texture texture = new Texture("src/main/resources/textures/def.png", false, GL_RGB);
 
 	/**
 	 * Create a new {@code GameObject} with the given x and y parameters and given
@@ -120,7 +120,6 @@ public class GameObject {
 	}
 
 	protected void draw() {
-		Game.getShaderProgram().use();
 		texture.use();
 		glBindVertexArray(VAO);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);

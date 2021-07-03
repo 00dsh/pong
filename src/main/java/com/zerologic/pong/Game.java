@@ -40,7 +40,7 @@ public class Game {
 	GameObject playButton;
 	GameObject quitButton;
 	GameObject pausepln;
-	GameObject ownership;
+	UIText ownership;
 
 	// Game objects
 	GameObject paddle1;
@@ -107,10 +107,14 @@ public class Game {
 		// Callback for any key events that don't need to be constantly and instantly
 		// updated, this is good for single key-press events.
 		glfwSetKeyCallback(window, (window, key, scancode, action, mods) -> {
-			if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS && state == GAMESTATE.PAUSED) {
+			if ((key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) && state == GAMESTATE.PAUSED) {
 				state = GAMESTATE.ACTIVE;
-			} else if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS && state == GAMESTATE.ACTIVE) {
+			} else if ((key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) && state == GAMESTATE.ACTIVE) {
 				state = GAMESTATE.PAUSED;
+			}
+
+			if (key == GLFW_KEY_P && action == GLFW_PRESS) {
+				pts_p1 = 5;
 			}
 		});
 		
@@ -141,25 +145,25 @@ public class Game {
 		glfwSetWindowSizeCallback(window, (window, width, height) -> glViewport(0, 0, width, height));
 		
 		// GameObjects for the menu
-		logo = new GameObject(600.0f, 200.0f);
-		logo.setTexture("./res/textures/menu/logo.jpg", true, GL_RGB);
-		logo.setPos(win_width / 2 - logo.size.x / 2, 40);
+		logo = new GameObject(258.0f, 116.0f);
+		logo.setTexture("src/main/resources/textures/menu/logo.png", true, GL_RGBA);
+		logo.setPos(win_width / 2 - logo.size.x / 2, 100);
 		
 		playButton = new GameObject(169.0f, 51.0f);
-		playButton.setTexture("./res/textures/menu/playbtn.png", true, GL_RGBA);
+		playButton.setTexture("src/main/resources/textures/menu/playbtn.png", true, GL_RGBA);
 		playButton.setPos(win_width / 2 - playButton.size.x / 2, 350);
 		
 		quitButton = new GameObject(169.0f, 61.0f);
-		quitButton.setTexture("./res/textures/menu/quitbtn.png", true, GL_RGBA);
+		quitButton.setTexture("src/main/resources/textures/menu/quitbtn.png", true, GL_RGBA);
 		quitButton.setPos(playButton.pos.x, playButton.pos.y + quitButton.size.y + 20);
 		
 		pausepln = new GameObject(263, 53);
-		pausepln.setTexture("./res/textures/menu/pause.png", true, GL_RGBA);
+		pausepln.setTexture("src/main/resources/textures/menu/pause.png", true, GL_RGBA);
 		pausepln.setPos(win_width / 2 - pausepln.size.x / 2, win_height / 2 - pausepln.size.y / 2);
 		
-		ownership = new GameObject(300, 20);
-		ownership.setTexture("./res/textures/menu/ownership.png", true, GL_RGBA);
-		ownership.setPos(5, win_height - ownership.size.y - 2);
+		ownership = new UIText("© ZeroLogic Games 2020", 30f);
+		ownership.setColor(1f, 1f, 1f, 1f);
+		ownership.setPos(5, win_height - ownership.height());
 		
 		// GameObjects for actual game
 		paddle1 = new GameObject(25.0f, 200.0f);
@@ -171,14 +175,12 @@ public class Game {
 		ball = new GameObject(20.0f, 20.0f);
 		ball.setPos(win_width/2 - ball.size.x / 2, win_height / 2 - ball.size.y / 2);
 
-		text_pts_p1 = new UIText("pts_p1", 90f, 0f, 0f);
+		text_pts_p1 = new UIText(pts_p1, 90f, 0f, 0f);
 		text_pts_p1.setColor(1f, 1f, 1f, 1f);
 
-		text_pts_p2 = new UIText(pts_p2, 90f, text_pts_p1.width(), 0f);
+		text_pts_p2 = new UIText(pts_p2, 90f, 0f, 0f);
 		text_pts_p2.setColor(1f, 1f, 1f, 1f);
-
-		speed = new UIText(ballSpeed, 100f,  1280f/2f, 200);
-		speed.setColor(1f, 1f, 1f, 1f);
+		text_pts_p2.setPos(1280f - text_pts_p2.width(), 0);
 
 		origBallSpeed = ballSpeed;
 
@@ -198,8 +200,8 @@ public class Game {
 				state = GAMESTATE.PLAYER_WIN;
 
 			switch (state) {
-				case ACTIVE -> drawGame();
 				case MENU -> drawMenu();
+				case ACTIVE -> drawGame();
 				case PAUSED -> drawPause();
 				case PLAYER_WIN -> drawWin();
 			}
@@ -252,37 +254,44 @@ public class Game {
 	}
 	
 	void drawMenu() {
-		Renderer.draw(new UIText((int)glfwGetTime(), 100f, 0f, 0f));
-		Renderer.draw(logo, 1.0f);
-		Renderer.draw(playButton, 1.0f);
-		Renderer.draw(quitButton, 1.0f);
-		Renderer.draw(ownership, 1.0f);
+		Renderer.draw(logo);
+		Renderer.draw(playButton);
+		Renderer.draw(quitButton);
+		Renderer.draw(ownership);
 	}
 	
 	void drawGame() {
 		checkBall();
-		Renderer.draw(paddle1, 1);
-		Renderer.draw(paddle2, 1);
-		Renderer.draw(ball, 1);
+		Renderer.draw(paddle1);
+		Renderer.draw(paddle2);
+		Renderer.draw(ball);
 
 		Renderer.draw(text_pts_p1);
 		Renderer.draw(text_pts_p2);
-		Renderer.draw(speed);
 
-		//text_pts_p1.setText(pts_p1);
+		text_pts_p1.setText(pts_p1);
 		text_pts_p2.setText(pts_p2);
-		speed.setText((int)ballSpeed);
-		speed.setPos(1280f/2f - speed.width()/2f, 0f);
-		speed.setColor(1.0f, 0f, 0f, 1f);
 	}
 	
 	void drawPause() {
-		Renderer.draw(pausepln, 1.0f);
-		Renderer.draw(quitButton, 1.0f);
+		Renderer.draw(pausepln);
+		Renderer.draw(quitButton);
 	}
 	
 	void drawWin()	{
-		Renderer.draw(quitButton, 1.0f);
+		UIText playerWon;
+
+		if (pts_p1 >= 5) {
+			playerWon = new UIText("Player 1 has won the game!", 100f);
+			playerWon.setPos(1280f/2f - playerWon.width()/2f, 720f/2f - playerWon.height()/2f - 100);
+			playerWon.setColor(1f, 1f, 1f, 1f);
+			Renderer.draw(playerWon);
+		} else if (pts_p2 >= 5) {
+			playerWon = new UIText("Player 2 has won the game!", 100f);
+			playerWon.setPos(1280f/2f - playerWon.width()/2f, 720f/2f - playerWon.height()/2f);
+			playerWon.setColor(1f, 1f, 1f, 1f);
+			Renderer.draw(playerWon);
+		}
 	}
 	
 	boolean checkLMB(GameObject object) {
