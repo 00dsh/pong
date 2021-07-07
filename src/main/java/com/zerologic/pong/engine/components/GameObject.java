@@ -41,10 +41,10 @@ public class GameObject {
 		// Vertex data
 		float[] data = {
 			// Vertex positions	   // Tex coords
-			0.0f,   0.0f,   0.0f,   0.0f, 1.0f, // Top left
-			size.x, 0.0f,   0.0f,   1.0f, 1.0f, // Top right
-			size.x, size.y, 0.0f,   1.0f, 0.0f, // Bottom right
-			0.0f,   size.y, 0.0f,   0.0f, 0.0f  // Bottom left
+			0.0f,   0.0f,   0.0f, 1.0f, // Top left
+			size.x, 0.0f,   1.0f, 1.0f, // Top right
+			size.x, size.y, 1.0f, 0.0f, // Bottom right
+			0.0f,   size.y, 0.0f, 0.0f  // Bottom left
 		};
 		
 		int[] indices = {
@@ -63,11 +63,8 @@ public class GameObject {
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices, GL_STATIC_DRAW);
 
-		glVertexAttribPointer(0, 3, GL_FLOAT, false, 20, 0);
+		glVertexAttribPointer(0, 4, GL_FLOAT, false, 16, 0);
 		glEnableVertexAttribArray(0);
-
-		glVertexAttribPointer(1, 2, GL_FLOAT, false, 20, 12);
-		glEnableVertexAttribArray(1);
 
 		glBindVertexArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);

@@ -3,7 +3,6 @@ package com.zerologic.pong.engine.components.gui.uitext;
 import com.zerologic.pong.engine.ShaderProgram;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.stb.*;
-import org.lwjgl.system.CallbackI;
 
 import static org.lwjgl.stb.STBTruetype.*;
 
@@ -22,8 +21,8 @@ public class UIFontLoader {
 
     private static STBTTFontinfo fontInfo;
     private static ByteBuffer data; // The buffer to store the font data
-    private static ByteBuffer bitmap = BufferUtils.createByteBuffer(bmpSize*bmpSize); // The buffer that has the actual drawn image of the bitmap
-    private static STBTTBakedChar.Buffer cdata = STBTTBakedChar.calloc(143); // Character data from the font, is 96 because the standard range of chars is from 32-96, 143 for special chars
+    private final static ByteBuffer bitmap = BufferUtils.createByteBuffer(bmpSize*bmpSize); // The buffer that has the actual drawn image of the bitmap
+    private final static STBTTBakedChar.Buffer cdata = STBTTBakedChar.calloc(143); // Character data from the font, is 96 because the standard range of chars is from 32-96, 143 for special chars
 
     private final static String defaultFont = "C:/Windows/Fonts/Arial.ttf"; // To be defined by programmer, this is a font that the loader defaults to if there is not fonts found at the given parameter
     private static String fontPath;
@@ -43,12 +42,17 @@ public class UIFontLoader {
 
     // Returns true on successful font load
     protected static boolean generateBitmap(float size) {
-        if(size < 0) {
-            size = 0;
+        fontHeight = size;
+
+        if(checkFontExists(fontHeight)) {
+            return true;
+        }
+
+        if(fontHeight < 0) {
+            fontHeight = 0;
             System.err.println("Font size cannot be below 0!");
         }
 
-        fontHeight = size;
         fontInfo = STBTTFontinfo.create();
 
         if(!stbtt_InitFont(fontInfo, data)) {
@@ -69,21 +73,29 @@ public class UIFontLoader {
 
         // Bakes the font to a texture of size bmpSize*bmpSize with the first character as codepoint 32
         stbtt_BakeFontBitmap(data, fontHeight, bitmap, bmpSize, bmpSize, 32, cdata);
+        texture = glGenTextures();
+        glBindTexture(GL_TEXTURE_2D, texture);
+
+        LoadedFont font = new LoadedFont(fontPath, fontHeight);
+        font.setData(cdata, ascent, descent, lineGap, scale, bmpSize, bitmap, texture);
+        loadedFonts.add(font);
 
         glPixelStorei(GL_UNPACK_ALIGNMENT, GL_TRUE); // Disable 4-byte pixel alignment
 
-        texture = glGenTextures();
-        glBindTexture(GL_TEXTURE_2D, texture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, bmpSize, bmpSize, 0, GL_RED, GL_UNSIGNED_BYTE, bitmap);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, font.getBmpSize(), font.getBmpSize(), 0, GL_RED, GL_UNSIGNED_BYTE, getFontBySize(fontHeight).getBitmap());
+        glGenerateMipmap(GL_TEXTURE_2D);
 
-        LoadedFont font = new LoadedFont(fontPath, (int)fontHeight);
-        font.setData(cdata, ascent, descent, lineGap, scale, bmpSize, texture);
-        loadedFonts.add(font);
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        // Clear/free all data from UIFontLoader when there's no need to hold any data.
+        cdata.clear();
+        data.clear();
+        bitmap.clear();
 
         return true;
     }
@@ -123,11 +135,26 @@ public class UIFontLoader {
         return ByteBuffer.allocate(0);
     }
 
-    public static void free() {
+    public static void destroy() {
+        fontInfo.free();
         stbtt_FreeBitmap(bitmap);
+
+        cdata.clear();
+        data.clear();
+        bitmap.clear();
+
+        loadedFonts.clear();
     }
 
     public static ShaderProgram getShaderProgram() { return txtShader; }
+
+    public static void printLoadedFonts() {
+        for(LoadedFont f : loadedFonts) {
+            System.out.println("Texture ID: " + f.getTextureID() + "\n" +
+                    "Texture size: " + f.getFontSize() + "\n" +
+                    "X advance: " + f.getCharData().xadvance());
+        }
+    }
 
     public static LoadedFont getFontBySize(float size) {
         for(LoadedFont f : loadedFonts) {
@@ -135,7 +162,21 @@ public class UIFontLoader {
                 return f;
             }
         }
+        System.out.println("Unable to find font, generating new one!");
         generateBitmap(size);
         return loadedFonts.lastElement();
+    }
+
+    private static boolean checkFontExists(float size) {
+        for (LoadedFont f : loadedFonts) {
+            if(f.getFontSize() == size){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static STBTTBakedChar.Buffer getCharData() {
+        return cdata;
     }
 }

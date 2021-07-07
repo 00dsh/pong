@@ -1,6 +1,5 @@
 package com.zerologic.pong.engine.components.gui.uitext;
 
-import com.zerologic.pong.Game;
 import org.joml.Vector2f;
 import org.joml.Vector4f;
 import org.lwjgl.stb.*;
@@ -13,6 +12,8 @@ import static org.lwjgl.stb.STBTruetype.*;
 import java.nio.FloatBuffer;
 import java.util.Vector;
 
+// TODO: Get the true dimensions of a text object, current method inaccurate
+
 public class UIText {
 
     private String text;
@@ -22,15 +23,13 @@ public class UIText {
     private final Vector<STBTTAlignedQuad> bakedChars = new Vector<>();
 
     // X and Y of the actual quad
-    private Vector2f pos;
+    private final Vector2f pos;
     private float fontSize;
 
     private Vector2f size;
     private Vector4f color; // RGBA
 
-    private int VAO;
-    private int VBO;
-    private int EBO;
+    private int VAO, VBO, EBO;
 
     static int[] indices = {
         0, 1, 3,
@@ -41,16 +40,16 @@ public class UIText {
     public UIText(String text, float fontSize) {
         this.text = text;
         this.fontSize = fontSize;
-        this.pos = new Vector2f(0f, 0f);
+        this.pos = new Vector2f(0f, 0f); // Set pos
         this.color = new Vector4f(0.0f, 0.0f, 0.0f, 1.0f); // Set font color to black by default
 
-        init();
+        init(); // Call initialize method from constructor
     }
 
     public UIText(String text, float fontSize, float x, float y) {
         this.text = text;
         this.fontSize = fontSize;
-        this.pos = new Vector2f(x, y);
+        this.pos = new Vector2f(x, y); // Set pos
         this.color = new Vector4f(0.0f, 0.0f, 0.0f, 1.0f); // Set font color to black by default
 
         init(); // Call initialize method from constructor
@@ -59,7 +58,7 @@ public class UIText {
     public UIText(int text, float fontSize, float x, float y) {
         this.text = Integer.toString(text);
         this.fontSize = fontSize;
-        this.pos = new Vector2f(x, y);
+        this.pos = new Vector2f(x, y); // Set pos
         this.color = new Vector4f(0.0f, 0.0f, 0.0f, 1.0f); // Set font color to black by default
 
         init(); // Call initialize method from constructor
@@ -68,25 +67,24 @@ public class UIText {
     public UIText(float text, float fontSize, float x, float y) {
         this.text = Float.toString(text);
         this.fontSize = fontSize;
-        this.pos = new Vector2f(x, y);
+        this.pos = new Vector2f(x, y); // Set pos
         this.color = new Vector4f(0.0f, 0.0f, 0.0f, 1.0f); // Set font color to black by default
 
         init(); // Call initialize method from constructor
     }
 
-    private void init() {
-        // For debug purposes
-        // System.out.println("Ascent: " + STBFontLoader.getAscent() + " Descent: " + -STBFontLoader.getDescent() + " LineGap: " + STBFontLoader.getLineGap());
-        // System.out.println("Xpos: " + this.x.get(0) + " Ypos: " + this.y.get(0));
-
+    public void init() {
         // Activate the shader and set the color
         UIFontLoader.getShaderProgram().use();
         UIFontLoader.getShaderProgram().setVector4f(this.color, "color");
 
         // Initialize fontloader with given size and clear buffers and baked chars, reset origin
         UIFontLoader.generateBitmap(fontSize); // Load a font bitmap with the desired size
+
         bakedChars.clear();
         resetPosBuffers();
+
+        int newLineMul = 1;
 
         // Create baked chars for each of the characters in the string
         for (int i = 0; i < text.length(); i++) {
@@ -95,8 +93,9 @@ public class UIText {
             if (text.charAt(i)=='\n') {
                 // Virtual cursor positions
                 // float vCursorX = this.x.get(0);
+                newLineMul++;
                 float vCursorY = this.y.get(0);
-                this.putPosBuffer(0, getNewlineYOff(vCursorY)); // Put these 2 values in the x and y pos buffers respectively
+                this.putPosBuffer(0f, getNewlineYOff(vCursorY)); // Put these 2 values in the x and y pos buffers respectively
                 continue;
             }
 
@@ -106,7 +105,8 @@ public class UIText {
             bakedChars.add(q);
         }
 
-        size = new Vector2f(bakedChars.lastElement().x1(), fontSize);
+        // Not 100% accurate as the last element could be a char after a newline
+        size = new Vector2f(bakedChars.lastElement().x1(), fontSize * newLineMul);
 
         VAO = glGenVertexArrays();
         glBindVertexArray(VAO);
@@ -120,6 +120,10 @@ public class UIText {
 
         glVertexAttribPointer(0, 4, GL_FLOAT, false, 16, 0);
         glEnableVertexAttribArray(0);
+
+        glBindVertexArray(0);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
 
     // Draw only code, must set shader in renderer class!
@@ -128,7 +132,7 @@ public class UIText {
         UIFontLoader.getShaderProgram().use();
         UIFontLoader.getShaderProgram().setVector4f(this.color, "color");
 
-        glBindTexture(GL_TEXTURE_2D, UIFontLoader.getFontBySize(fontSize).textureID());
+        glBindTexture(GL_TEXTURE_2D, UIFontLoader.getFontBySize(fontSize).getTextureID());
         glBindVertexArray(VAO);
 
         for(STBTTAlignedQuad q : bakedChars) {
@@ -197,8 +201,8 @@ public class UIText {
     }
 
     public float width() {
-        return this.size.x + 3f;
-    } // Add padding to the right of 3 pixels
+        return this.size.x + 3f; // Add padding to the right of 3 pixels
+    }
 
     public float height() {
         return this.size.y;
@@ -217,9 +221,10 @@ public class UIText {
         return this.text;
     }
 
+    // Now extremely efficient/lightweight in most cases
     public void setText(String value) {
-        if (!value.equals(text)) {
-            text = value;
+        if (!value.equals(this.text)) {
+            this.text = value;
             init();
         }
     }

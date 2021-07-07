@@ -9,21 +9,18 @@ import static org.lwjgl.glfw.GLFW.*;
 
 public class Time {
 
-	private static double currentTime;
+	private static double oldTime = 0;
+	private static double currentTime = 0;
 	private static float deltaTime;
-	public static float actualTime;
 
 	public static float deltaTimef() {
 		return deltaTime;
 	}
 
 	public static void calcTime() {
-		double oldTime = currentTime;
+		oldTime = currentTime;
 		currentTime = glfwGetTime();
 
 		deltaTime = (float) (currentTime - oldTime);
-
-		//deltaTime = deltaTimef();
-		actualTime = (float) glfwGetTime();
 	}
 }

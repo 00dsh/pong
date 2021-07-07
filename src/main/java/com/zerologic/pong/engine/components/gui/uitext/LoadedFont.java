@@ -1,27 +1,29 @@
 package com.zerologic.pong.engine.components.gui.uitext;
 
-import org.joml.Vector4f;
 import org.lwjgl.stb.STBTTBakedChar;
-import org.lwjgl.stb.STBTTFontinfo;
+import org.lwjgl.system.StructBuffer;
+
+import static org.lwjgl.stb.STBTTBakedChar.*;
+import java.nio.ByteBuffer;
 
 public class LoadedFont {
 
     // The LoadedFont class is simply instantiated with a created bitmap, so that any bitmaps
     // that are needed are created and stored in the FontLoader class.
-    // TODO: Get the length for each text object in pixels
 
     private final String path;
     private final float fontSize;
 
-    private STBTTBakedChar.Buffer cdata;
+    private STBTTBakedChar.Buffer cdata = STBTTBakedChar.create(143);
 
     private int ascent;
     private int descent;
     private int lineGap;
     private float scale;
     private int bmpSize;
+    private int textureID;
 
-    private int texture;
+    private ByteBuffer bitmap;
 
     /**
      * Creates a new {@code LoadedFont} with {@code UIFontLoader} for use
@@ -34,25 +36,32 @@ public class LoadedFont {
         this.fontSize = fontSize;
     }
 
-    public void setData(STBTTBakedChar.Buffer cdata, int ascent, int descent, int lineGap, float scale, int bmpSize, int texture) {
-        this.cdata = cdata;
+    public void setData(STBTTBakedChar.Buffer cdata, int ascent, int descent, int lineGap, float scale, int bmpSize, ByteBuffer bitmap, int texture) {
+
+        // Foreach loop adds each STBTTBakedChar into the new buffer without any reference to the source buffer
+        for(STBTTBakedChar c : cdata) {
+            this.cdata.put(c);
+        }
+        this.cdata.flip();
+
         this.ascent = ascent;
         this.descent = descent;
         this.lineGap = lineGap;
         this.scale = scale;
         this.bmpSize = bmpSize;
-        this.texture = texture;
+        this.bitmap = bitmap;
+        this.textureID = texture;
     }
 
-    public STBTTBakedChar.Buffer getCharData() {
-        return this.cdata;
-    }
+    public STBTTBakedChar.Buffer getCharData() { return this.cdata; }
 
     public float getFontSize() { return this.fontSize; }
 
     public int getBmpSize() { return this.bmpSize; }
 
-    public int textureID() { return this.texture; }
+    public ByteBuffer getBitmap() { return this.bitmap; }
+
+    public int getTextureID() { return this.textureID; }
 
     public int ascent() { return this.ascent; }
 

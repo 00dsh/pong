@@ -25,53 +25,58 @@ public class Game {
 
 	// Window handle + variables
 	private static long window;
-	private final static float win_width = 1280.0f;
-	private final static float win_height = 720.0f;
+	private static float win_width = 1280f;
+	private static float win_height = 720f;
 	private final static String win_title = "PONG";
 
 	private static ShaderProgram program;
 	private static ShaderProgram textShader;
+
+	private int debugCounter = 0;
+	private boolean debug = false;
+	private boolean debugFPS = false;
 	
 	// Mouse position vector
-	Vector2f m_pos = new Vector2f();
+	private final Vector2f m_pos = new Vector2f();
 
 	// Menu objects
-	GameObject logo;
-	GameObject playButton;
-	GameObject quitButton;
-	GameObject pausepln;
-	UIText ownership;
+	private GameObject logo;
+	private GameObject playButton;
+	private GameObject quitButton;
+	private GameObject pausepln;
+	private UIText ownership;
 
 	// Game objects
-	GameObject paddle1;
-	GameObject paddle2;
-	GameObject ball;
+	private GameObject paddle1;
+	private GameObject paddle2;
+	private GameObject ball;
 
 	// Text objects
-	UIText text_pts_p1;
-	UIText text_pts_p2;
+	private UIText text_pts_p1;
+	private UIText text_pts_p2;
 
-	UIText speed;
+	// Debug objects
+	private UIText debugText;
 
 	// Game attributes
-	float paddle1Speed = 1000f;
-	float paddle2Speed = 1000f;
+	private final float paddle1Speed = 1000f;
+	private final float paddle2Speed = 1000f;
 
-	int ballDirection = -1;
-	int dirToServe = 1;
+	private int ballDirection = -1;
+	private int dirToServe = 1;
 
-	float ballSpeed = 500.0f;
-	float ballIncSpeed = 50.0f;
-	float ballAngle = 45.0f;
+	private float ballSpeed = 500.0f;
+	private final float ballIncSpeed = 50.0f;
+	private float ballAngle = 45.0f;
 
-	int ballIncAngle;
-	int maxRandomAngle = 30;
-	
-	float origBallSpeed; // Purpose is to reset the speed to the same if someone loses a point.
+	private int ballIncAngle;
+	private final int maxRandomAngle = 30;
+
+	private final float origBallSpeed = ballSpeed; // Purpose is to reset the speed to the same if someone loses a point.
 	
 	// Player points
-	int pts_p1 = 0;
-	int pts_p2 = 0;
+	private int pts_p1 = 0;
+	private int pts_p2 = 0;
 	
 	Random random = new Random();
 
@@ -93,6 +98,7 @@ public class Game {
 		glfwWindowHint(GLFW_VERSION_MAJOR, 3);
 		glfwWindowHint(GLFW_VERSION_MINOR, 3);
 		glfwWindowHint(GLFW_VERSION_REVISION, 2);
+		glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
 		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 		glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
 
@@ -113,9 +119,30 @@ public class Game {
 				state = GAMESTATE.PAUSED;
 			}
 
-			if (key == GLFW_KEY_P && action == GLFW_PRESS) {
-				pts_p1 = 5;
+			if (debug) {
+				if (key == GLFW_KEY_U && action == GLFW_PRESS) {
+					UIFontLoader.printLoadedFonts();
+				}
+
+				if (key == GLFW_KEY_P && action == GLFW_PRESS) {
+					debugFPS = !debugFPS;
+				}
 			}
+
+			// Used to enable debug mode
+			if (key == GLFW_KEY_GRAVE_ACCENT && action == GLFW_PRESS) {
+				if(!debug)
+					debugCounter++;
+				else
+					debugCounter--;
+
+				if (debugCounter == 3) {
+					debug = true;
+				} else if (debugCounter == 0) {
+					debug = false;
+				}
+			}
+
 		});
 		
 		// Mouse cursor position callback
@@ -142,7 +169,11 @@ public class Game {
 			}
 		});
 		
-		glfwSetWindowSizeCallback(window, (window, width, height) -> glViewport(0, 0, width, height));
+		glfwSetWindowSizeCallback(window, (window, width, height) -> {
+			glViewport(0, 0, width, height);
+			win_width  = width;
+			win_height = height;
+		});
 		
 		// GameObjects for the menu
 		logo = new GameObject(258.0f, 116.0f);
@@ -182,22 +213,31 @@ public class Game {
 		text_pts_p2.setColor(1f, 1f, 1f, 1f);
 		text_pts_p2.setPos(1280f - text_pts_p2.width(), 0);
 
-		origBallSpeed = ballSpeed;
+		// Debug components
+		debugText = new UIText(
+				"mouse pos (x, y): " + m_pos.x + ", " + m_pos.y + "\n" +
+				"delta time: " + Time.deltaTimef() + "\n" +
+				"ball speed: " + ballSpeed + "\n" +
+				"ball pos (x, y): " + ball.pos.x + ", " + ball.pos.y + "\n" +
+				"paddle1 pos(y): " + paddle1.pos.y + "\n" +
+				"paddle2 pos(y): " + paddle2.pos.y
+				, 20f);
+		debugText.setPos(0f, win_height - debugText.height());
 
 		glfwShowWindow(window);
 	}
 	
 	// Game loop
 	void loop() {
-
 		glClearColor(0.2f, 0.2f, 0.4f, 1.0f);
 
 		while (!glfwWindowShouldClose(window)) {
 			glClear(GL_COLOR_BUFFER_BIT);
-			
+
 			// Check for win condition before the game draws a new frame to avoid weird effects
-			if(pts_p1 == 5 || pts_p2 == 5)
+			if(pts_p1 == 5 || pts_p2 == 5) {
 				state = GAMESTATE.PLAYER_WIN;
+			}
 
 			switch (state) {
 				case MENU -> drawMenu();
@@ -206,10 +246,35 @@ public class Game {
 				case PLAYER_WIN -> drawWin();
 			}
 
-			Time.calcTime();
+			// Buggy, causes game to slow down but obviously debugging isn't meant to be enabled for regular gameplay
+			// Use at your own peril
+			if(debug) {
+				Renderer.draw(debugText);
+
+				if(debugFPS) {
+					debugText.setText(
+							"mouse pos (x, y): " + m_pos.x + ", " + m_pos.y + "\n" +
+									"delta time: " + Time.deltaTimef() + "\n" +
+									"ball speed: " + ballSpeed + "\n" +
+									"ball pos (x, y) press P to disable: " + ball.pos.x + ", " + ball.pos.y + "\n" +
+									"paddle1 pos(y): " + paddle1.pos.y + "\n" +
+									"paddle2 pos(y): " + paddle2.pos.y);
+				} else {
+					debugText.setText(
+							"mouse pos (x, y): " + m_pos.x + ", " + m_pos.y + "\n" +
+									"delta time: " + Time.deltaTimef() + "\n" +
+									"ball speed: " + ballSpeed + "\n" +
+									"ball pos: (disabled, press P to enable) \n" +
+									"paddle1 pos(y): " + paddle1.pos.y + "\n" +
+									"paddle2 pos(y): " + paddle2.pos.y);
+				}
+
+			}
+
 			processInput();
 			glfwPollEvents();
 			glfwSwapBuffers(window);
+			Time.calcTime();
 		}
 	}
 
@@ -281,12 +346,12 @@ public class Game {
 	void drawWin()	{
 		UIText playerWon;
 
-		if (pts_p1 >= 5) {
+		if (pts_p1 == 5) {
 			playerWon = new UIText("Player 1 has won the game!", 100f);
 			playerWon.setPos(1280f/2f - playerWon.width()/2f, 720f/2f - playerWon.height()/2f - 100);
 			playerWon.setColor(1f, 1f, 1f, 1f);
 			Renderer.draw(playerWon);
-		} else if (pts_p2 >= 5) {
+		} else if (pts_p2 == 5) {
 			playerWon = new UIText("Player 2 has won the game!", 100f);
 			playerWon.setPos(1280f/2f - playerWon.width()/2f, 720f/2f - playerWon.height()/2f);
 			playerWon.setColor(1f, 1f, 1f, 1f);
@@ -360,20 +425,16 @@ public class Game {
 		}
 	}
 	
-	boolean checkCollision(GameObject first, GameObject second) {
-		
+	private boolean checkCollision(GameObject first, GameObject second) {
 		if(first.pos.x + first.size.x >= second.pos.x && first.pos.x <= second.pos.x + second.size.x
 			&& first.pos.y + first.size.y >= second.pos.y && first.pos.y <= second.pos.y + second.size.y) {    	    // Checking for x-axis collision
 			return true;
 		}
 		return false;
 	}
-	
-	float degToRad(float f) {
-		return f * ((float) Math.PI / 180);
-	}
-	
+
 	void cleanUp() {
+		UIFontLoader.destroy();
 		glfwDestroyWindow(window);
 		glfwTerminate();
 		GL.destroy();
@@ -392,10 +453,6 @@ public class Game {
 	// Game accessors
 	public static ShaderProgram getShaderProgram() {
 		return program;
-	}
-
-	public static long getWindow() {
-		return window;
 	}
 
 	public static float getWinWidth() {
