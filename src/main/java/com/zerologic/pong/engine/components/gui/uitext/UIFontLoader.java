@@ -14,9 +14,6 @@ import static org.lwjgl.opengl.GL40.*;
 
 public class UIFontLoader {
 
-    /* TODO: FontLoader can only load a single font at a time, with only a single size,
-        obviously this is not smart for a game.*/
-
     private static int bmpSize = 1024;
 
     private static STBTTFontinfo fontInfo;
