@@ -8,11 +8,13 @@ import com.zerologic.pong.engine.components.Renderer;
 import com.zerologic.pong.engine.components.gui.uitext.UIFontLoader;
 import com.zerologic.pong.engine.components.gui.uitext.UIText;
 import org.joml.Vector2f;
+import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.*;
 import static org.lwjgl.opengl.GL46.*;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.system.MemoryUtil.*;
 
+import java.nio.IntBuffer;
 import java.util.Random;
 
 /**
@@ -24,10 +26,14 @@ import java.util.Random;
 public class Game {
 
 	// Window handle + variables
+	private static long monitor;
 	private static long window;
 	private static float win_width = 1280f;
 	private static float win_height = 720f;
 	private final static String win_title = "PONG";
+
+	private int monitorWidth;
+	private int monitorHeight;
 
 	private static ShaderProgram program;
 	private static ShaderProgram textShader;
@@ -92,6 +98,7 @@ public class Game {
 	void init() {
 		glfwInit();
 
+		monitor = glfwGetPrimaryMonitor();
 		window = glfwCreateWindow((int)win_width, (int)win_height, win_title, NULL, NULL);
 		glfwMakeContextCurrent(window);
 
@@ -101,6 +108,16 @@ public class Game {
 		glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
 		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 		glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+
+		// Get monitor attributes
+		IntBuffer mWidth = BufferUtils.createIntBuffer(1);
+		IntBuffer mHeight = BufferUtils.createIntBuffer(1);
+		glfwGetMonitorWorkarea(monitor, null, null, mWidth, mHeight);
+
+		monitorWidth = mWidth.get(0);
+		monitorHeight = mHeight.get(0);
+
+		glfwSetWindowPos(window, (int)(monitorWidth/2 - win_width/2), (int)(monitorHeight/2 - win_height/2));
 
 		GL.createCapabilities();
 
@@ -117,6 +134,15 @@ public class Game {
 				state = GAMESTATE.ACTIVE;
 			} else if ((key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) && state == GAMESTATE.ACTIVE) {
 				state = GAMESTATE.PAUSED;
+			}
+
+			if (key == GLFW_KEY_F10 && action == GLFW_PRESS) {
+				glfwSetWindowMonitor(window, NULL, 0, 0, 1280, 720, 165);
+				glfwSetWindowPos(window, (int)(monitorWidth/2 - win_width/2), (int)(monitorHeight/2 - win_height/2));
+			}
+
+			if (key == GLFW_KEY_F11 && action == GLFW_PRESS) {
+				glfwSetWindowMonitor(window, monitor, 0, 0, 1280, 720, 165);
 			}
 
 			if (debug) {
