@@ -12,7 +12,7 @@ public class Button {
     private UIText text;
     private Vector4f dim; // xpos, ypos, width, height (xyzw)
 
-    public Button() { this("No text", 50f,0f, 0f); }
+    public Button() { this("No text", 50f, 0f, 0f); }
 
     public Button(String text, float fontSize, float xpos, float ypos) {
         this.text = new UIText(text, fontSize, xpos, ypos);
@@ -57,6 +57,21 @@ public class Button {
 
     public void draw() {
         glBindVertexArray(this.VAO);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        text.draw();
+    }
+
+    public float x() {
+        return this.dim.x;
+    }
+
+    public float y() {
+        return this.dim.y;
+    }
+
+    public void setPos(float x, float y) {
+        this.dim.x = x;
+        this.dim.y = y;
     }
 
 }

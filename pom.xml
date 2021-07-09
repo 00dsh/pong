@@ -6,7 +6,7 @@
 
     <groupId>com.zerologic</groupId>
     <artifactId>pong</artifactId>
-    <version>0.3-ALPHA</version>
+    <version>0.4-ALPHA</version>
 
     <properties>
         <maven.compiler.source>16</maven.compiler.source>

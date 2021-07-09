@@ -49,9 +49,7 @@ public class ShaderProgram {
 		glAttachShader(ID, fragmentShader);
 		glLinkProgram(ID);
 
-		glUseProgram(ID);
 		initMatrices();
-		glUseProgram(0);
 
 		// Delete the shaders as we no longer need them
 		glDeleteShader(vertexShader);
@@ -60,12 +58,15 @@ public class ShaderProgram {
 
 	public void initMatrices() {
 		// Set up matrices
-		projection.ortho(0.0f, Game.getWinWidth(), Game.getWinHeight(), 0.0f, -1.0f, 1.0f);
+		glUseProgram(ID);
+		projection.setOrtho(0.0f, Game.getWinWidth(), Game.getWinHeight(), 0.0f, -1.0f, 1.0f);
 
 		// Apply to shader program
 		setMatrix4f(projection, "projection");
 		setMatrix4f(model, "model");
 		setMatrix4f(transform, "transform");
+
+		glUseProgram(0);
 	}
 
 	public void setModel(Matrix4f m) {

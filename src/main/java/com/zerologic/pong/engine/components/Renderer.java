@@ -1,12 +1,23 @@
 package com.zerologic.pong.engine.components;
 
 import com.zerologic.pong.Game;
+import com.zerologic.pong.engine.components.gui.input.Button;
 import com.zerologic.pong.engine.components.gui.uitext.*;
 import org.joml.*;
 
 public class Renderer {
 
 	static Matrix4f model = new Matrix4f();
+
+	public static void draw(Button button) {
+		Game.getShaderProgram().use();
+		model.translation(new Vector3f(button.x(), button.y(), 0.0f));
+
+		Game.getShaderProgram().setModel(model);
+		Game.getShaderProgram().updateModel();
+
+		button.draw();
+	}
 
 	public static void draw(GameObject gameObject) {
 		Game.getShaderProgram().use();

@@ -35,7 +35,7 @@ public class UIFontLoader {
 
     private static ShaderProgram txtShader;
 
-    private static Vector<LoadedFont> loadedFonts = new Vector<>();
+    private static final Vector<LoadedFont> loadedFonts = new Vector<>();
 
     // Returns true on successful font load
     protected static boolean generateBitmap(float size) {

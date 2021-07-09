@@ -5,11 +5,17 @@ import com.zerologic.pong.engine.Time;
 import com.zerologic.pong.engine.components.GameObject;
 import com.zerologic.pong.engine.components.Renderer;
 
+import com.zerologic.pong.engine.components.gui.input.Button;
 import com.zerologic.pong.engine.components.gui.uitext.UIFontLoader;
 import com.zerologic.pong.engine.components.gui.uitext.UIText;
+
 import org.joml.Vector2f;
 import org.lwjgl.BufferUtils;
+import org.lwjgl.glfw.GLFWErrorCallback;
+import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.opengl.*;
+import org.lwjgl.system.CallbackI;
+
 import static org.lwjgl.opengl.GL46.*;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.system.MemoryUtil.*;
@@ -19,7 +25,7 @@ import java.util.Random;
 
 /**
  * @author Dilan Shabani
- * @version 0.3a
+ * @version 0.4a
  * @since 12/2/2020
  */
 
@@ -28,6 +34,8 @@ public class Game {
 	// Window handle + variables
 	private static long monitor;
 	private static long window;
+	private static GLFWVidMode mode;
+
 	private static float win_width = 1280f;
 	private static float win_height = 720f;
 	private final static String win_title = "PONG";
@@ -46,11 +54,10 @@ public class Game {
 	private final Vector2f m_pos = new Vector2f();
 
 	// Menu objects
+	private Button someButton;
 	private GameObject logo;
 	private GameObject playButton;
 	private GameObject quitButton;
-	private GameObject pausepln;
-	private UIText ownership;
 
 	// Game objects
 	private GameObject paddle1;
@@ -60,31 +67,34 @@ public class Game {
 	// Text objects
 	private UIText text_pts_p1;
 	private UIText text_pts_p2;
+	private UIText pauseText;
+	private UIText ownership;
 
 	// Debug objects
 	private UIText debugText;
 
 	// Game attributes
-	private final float paddle1Speed = 1000f;
-	private final float paddle2Speed = 1000f;
+	private float paddle1Speed = 1000f;
+	private float paddle2Speed = 1000f;
 
 	private int ballDirection = -1;
 	private int dirToServe = 1;
 
 	private float ballSpeed = 500.0f;
-	private final float ballIncSpeed = 50.0f;
+	private float ballIncSpeed = 50.0f;
 	private float ballAngle = 45.0f;
 
 	private int ballIncAngle;
 	private final int maxRandomAngle = 30;
 
-	private final float origBallSpeed = ballSpeed; // Purpose is to reset the speed to the same if someone loses a point.
+	private float origBallSpeed = ballSpeed; // Purpose is to reset the speed to the same if someone loses a point.
 	
 	// Player points
 	private int pts_p1 = 0;
 	private int pts_p2 = 0;
 	
 	Random random = new Random();
+	private GLFWVidMode mode1;
 
 	enum GAMESTATE {
 		MENU,
@@ -99,33 +109,32 @@ public class Game {
 		glfwInit();
 
 		monitor = glfwGetPrimaryMonitor();
+		mode = glfwGetVideoMode(monitor);
 		window = glfwCreateWindow((int)win_width, (int)win_height, win_title, NULL, NULL);
 		glfwMakeContextCurrent(window);
 
+		glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
 		glfwWindowHint(GLFW_VERSION_MAJOR, 3);
 		glfwWindowHint(GLFW_VERSION_MINOR, 3);
 		glfwWindowHint(GLFW_VERSION_REVISION, 2);
 		glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
 		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-		glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
 
-		// Get monitor attributes
-		IntBuffer mWidth = BufferUtils.createIntBuffer(1);
-		IntBuffer mHeight = BufferUtils.createIntBuffer(1);
-		glfwGetMonitorWorkarea(monitor, null, null, mWidth, mHeight);
+		// Get monitor attribs
+		monitorWidth = mode.width();
+		monitorHeight = mode.height();
 
-		monitorWidth = mWidth.get(0);
-		monitorHeight = mHeight.get(0);
-
+		// Set position before window is visible
 		glfwSetWindowPos(window, (int)(monitorWidth/2 - win_width/2), (int)(monitorHeight/2 - win_height/2));
 
-		GL.createCapabilities();
+		GL.createCapabilities(); // Call after window has been placed correctly
 
 		// Load shader programs (create the main program last to avoid an unnecessary use() call)
 		textShader = new ShaderProgram("./src/main/resources/shaders/textVert.glsl", "./src/main/resources/shaders/textFrag.glsl");
 		program = new ShaderProgram("./src/main/resources/shaders/vertex.glsl", "./src/main/resources/shaders/fragment.glsl");
 
 		UIFontLoader.init(textShader, "C:/Windows/Fonts/Arial.ttf"); // Initialize font loader
+		//UIFontLoader.init(textShader, "C:/Windows/Fonts/Consola.ttf");
 
 		// Callback for any key events that don't need to be constantly and instantly
 		// updated, this is good for single key-press events.
@@ -146,6 +155,14 @@ public class Game {
 			}
 
 			if (debug) {
+				if (key == GLFW_KEY_Y && action == GLFW_PRESS) {
+					win_width = 1920f; win_height = 1080f;
+					glViewport(0, 0, (int)win_width, (int)win_height);
+					program.initMatrices();
+					textShader.initMatrices();
+					glfwSetWindowSize(window, (int)win_width, (int)win_height);
+				}
+
 				if (key == GLFW_KEY_U && action == GLFW_PRESS) {
 					UIFontLoader.printLoadedFonts();
 				}
@@ -194,50 +211,82 @@ public class Game {
 				}
 			}
 		});
-		
-		glfwSetWindowSizeCallback(window, (window, width, height) -> {
-			glViewport(0, 0, width, height);
+
+		// Framebuffer callback to correctly update the viewport
+		glfwSetFramebufferSizeCallback(window, (window, width, height) -> {
 			win_width  = width;
 			win_height = height;
+
+			// Auto resize of objects from callback
+			// Auto set menu
+			logo.setPos(win_width / 2 - logo.size.x / 2, 100);
+			playButton.setPos(win_width / 2f - playButton.size.x / 2f, win_height / 2f - playButton.size.y / 2f);
+			quitButton.setPos(win_width / 2 - quitButton.size.x / 2, playButton.pos.y + quitButton.size.y + 20);
+			ownership.setPos(5, win_height - ownership.height());
+			pauseText.setPos(win_width / 2 - pauseText.width() / 2, (win_height / 2) - 100f - pauseText.height() / 2);
+
+			// Auto set game objects
+			paddle1.setPos(50.0f, win_height / 2f - paddle1.size.y / 2f);
+			paddle2.setPos(win_width - paddle2.size.x - 50.0f, (win_height / 2f) - paddle2.size.y / 2f);
+			ball.setPos(win_width / 2f - ball.size.x / 2f, win_height / 2f - ball.size.y / 2f);
+			text_pts_p2.setPos(win_width - text_pts_p2.width(), 0);
+
+			// Scaling paddle and ball speeds
+			paddle1Speed = 1000 * (win_height / 720f);
+			paddle2Speed = paddle1Speed;
+
+			ballSpeed = 500 * (win_width / 1280f);
+			origBallSpeed = 500 * (win_width / 1280f);
+			ballIncSpeed = 50 * (win_width / 1280f);
+
+			program.initMatrices();
+			textShader.initMatrices();
+			glViewport(0, 0, width, height);
 		});
+
+		glfwSetWindowAspectRatio(window, 16, 9);
+		glfwSetWindowSizeLimits(window, 915, 515, GLFW_DONT_CARE, GLFW_DONT_CARE);
 		
 		// GameObjects for the menu
 		logo = new GameObject(258.0f, 116.0f);
 		logo.setTexture("src/main/resources/textures/menu/logo.png", true, GL_RGBA);
 		logo.setPos(win_width / 2 - logo.size.x / 2, 100);
+
+		someButton = new Button("Hello world", 51f, 0f, 0f);
+		someButton.setPos(10f, 10f);
 		
 		playButton = new GameObject(169.0f, 51.0f);
 		playButton.setTexture("src/main/resources/textures/menu/playbtn.png", true, GL_RGBA);
-		playButton.setPos(win_width / 2 - playButton.size.x / 2, 350);
+		playButton.setPos(win_width / 2f - playButton.size.x / 2f, win_height / 2f - playButton.size.y / 2f);
 		
 		quitButton = new GameObject(169.0f, 61.0f);
 		quitButton.setTexture("src/main/resources/textures/menu/quitbtn.png", true, GL_RGBA);
 		quitButton.setPos(playButton.pos.x, playButton.pos.y + quitButton.size.y + 20);
+
+		pauseText = new UIText("Game Paused", 70f);
+		pauseText.setColor(1f, 1f, 1f, 1f);
+		pauseText.setPos(win_width / 2 - pauseText.width() / 2, (win_height / 2) - 100f - pauseText.height() / 2);
 		
-		pausepln = new GameObject(263, 53);
-		pausepln.setTexture("src/main/resources/textures/menu/pause.png", true, GL_RGBA);
-		pausepln.setPos(win_width / 2 - pausepln.size.x / 2, win_height / 2 - pausepln.size.y / 2);
-		
-		ownership = new UIText("© ZeroLogic Games 2020", 30f);
+		ownership = new UIText("ZeroLogic Games", 30f);
 		ownership.setColor(1f, 1f, 1f, 1f);
 		ownership.setPos(5, win_height - ownership.height());
 		
 		// GameObjects for actual game
 		paddle1 = new GameObject(25.0f, 200.0f);
-		paddle1.setPos(50.0f, win_height/2.0f - paddle1.size.y/2.0f);
+		paddle1.setPos(50.0f, win_height / 2.0f - paddle1.size.y / 2.0f);
 		
 		paddle2 = new GameObject(25.0f, 200.0f);
-		paddle2.setPos(1280.0f - paddle2.size.x - 50.0f, (720f / 2f) - paddle2.size.y/2.0f);
+		paddle2.setPos(win_width - paddle2.size.x - 50.0f, (win_height / 2f) - paddle2.size.y / 2f);
 		
 		ball = new GameObject(20.0f, 20.0f);
-		ball.setPos(win_width/2 - ball.size.x / 2, win_height / 2 - ball.size.y / 2);
+		ball.setPos(win_width / 2f - ball.size.x / 2f, win_height / 2f - ball.size.y / 2f);
 
-		text_pts_p1 = new UIText(pts_p1, 90f, 0f, 0f);
+		text_pts_p1 = new UIText(Integer.toString(pts_p1), 90f);
 		text_pts_p1.setColor(1f, 1f, 1f, 1f);
 
-		text_pts_p2 = new UIText(pts_p2, 90f, 0f, 0f);
+		text_pts_p2 = new UIText(Integer.toString(pts_p2), 90f);
 		text_pts_p2.setColor(1f, 1f, 1f, 1f);
-		text_pts_p2.setPos(1280f - text_pts_p2.width(), 0);
+		text_pts_p2.setPos(win_width - text_pts_p2.width(), 0);
 
 		// Debug components
 		debugText = new UIText(
@@ -276,23 +325,24 @@ public class Game {
 			// Use at your own peril
 			if(debug) {
 				Renderer.draw(debugText);
+				Renderer.draw(someButton);
 
 				if(debugFPS) {
 					debugText.setText(
-							"mouse pos (x, y): " + m_pos.x + ", " + m_pos.y + "\n" +
-									"delta time: " + Time.deltaTimef() + "\n" +
-									"ball speed: " + ballSpeed + "\n" +
-									"ball pos (x, y) press P to disable: " + ball.pos.x + ", " + ball.pos.y + "\n" +
-									"paddle1 pos(y): " + paddle1.pos.y + "\n" +
-									"paddle2 pos(y): " + paddle2.pos.y);
+							"mouse pos (x, y): " + (int)m_pos.x + ", " + (int)m_pos.y + "\n" +
+									"delta time: " + (int)Time.deltaTimef() + "\n" +
+									"ball speed: " + (int)ballSpeed + "\n" +
+									"ball pos (x, y) press P to disable: " + (int)ball.pos.x + ", " + (int)ball.pos.y + "\n" +
+									"paddle1 pos(y): " + (int)paddle1.pos.y + "\n" +
+									"paddle2 pos(y): " + (int)paddle2.pos.y);
 				} else {
 					debugText.setText(
-							"mouse pos (x, y): " + m_pos.x + ", " + m_pos.y + "\n" +
-									"delta time: " + Time.deltaTimef() + "\n" +
-									"ball speed: " + ballSpeed + "\n" +
+							"mouse pos (x, y): " + (int)m_pos.x + ", " + (int)m_pos.y + "\n" +
+									"delta time: " + (int)Time.deltaTimef() + "\n" +
+									"ball speed: " + (int)ballSpeed + "\n" +
 									"ball pos: (disabled, press P to enable) \n" +
-									"paddle1 pos(y): " + paddle1.pos.y + "\n" +
-									"paddle2 pos(y): " + paddle2.pos.y);
+									"paddle1 pos(y): " + (int)paddle1.pos.y + "\n" +
+									"paddle2 pos(y): " + (int)paddle2.pos.y);
 				}
 
 			}
@@ -365,7 +415,7 @@ public class Game {
 	}
 	
 	void drawPause() {
-		Renderer.draw(pausepln);
+		Renderer.draw(pauseText);
 		Renderer.draw(quitButton);
 	}
 	
