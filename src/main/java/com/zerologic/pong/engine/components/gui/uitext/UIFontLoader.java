@@ -24,22 +24,13 @@ public class UIFontLoader {
     private final static String defaultFont = "C:/Windows/Fonts/Arial.ttf"; // To be defined by programmer, this is a font that the loader defaults to if there is not fonts found at the given parameter
     private static String fontPath;
 
-    private static int ascent;
-    private static int descent;
-    private static int lineGap;
-    private static float scale;
-
-    private static int texture; // bitmap texture handle
-
-    private static float fontHeight;
-
     private static ShaderProgram txtShader;
 
     private static final Vector<LoadedFont> loadedFonts = new Vector<>();
 
     // Returns true on successful font load
     protected static boolean generateBitmap(float size) {
-        fontHeight = size;
+        float fontHeight = size;
 
         if(checkFontExists(fontHeight)) {
             return true;
@@ -62,15 +53,17 @@ public class UIFontLoader {
 
         stbtt_GetFontVMetrics(fontInfo, bAscent, bDescent, bLineGap);
 
-        ascent = bAscent.get();
-        descent = bDescent.get();
-        lineGap = bLineGap.get();
+        int ascent = bAscent.get();
+        int descent = bDescent.get();
+        int lineGap = bLineGap.get();
 
-        scale = stbtt_ScaleForPixelHeight(fontInfo, fontHeight);
+        float scale = stbtt_ScaleForPixelHeight(fontInfo, fontHeight);
 
         // Bakes the font to a texture of size bmpSize*bmpSize with the first character as codepoint 32
         stbtt_BakeFontBitmap(data, fontHeight, bitmap, bmpSize, bmpSize, 32, cdata);
-        texture = glGenTextures();
+
+        // bitmap texture handle
+        int texture = glGenTextures();
         glBindTexture(GL_TEXTURE_2D, texture);
 
         LoadedFont font = new LoadedFont(fontPath, fontHeight);
@@ -145,14 +138,6 @@ public class UIFontLoader {
 
     public static ShaderProgram getShaderProgram() { return txtShader; }
 
-    public static void printLoadedFonts() {
-        for(LoadedFont f : loadedFonts) {
-            System.out.println("Texture ID: " + f.getTextureID() + "\n" +
-                    "Texture size: " + f.getFontSize() + "\n" +
-                    "X advance: " + f.getCharData().xadvance());
-        }
-    }
-
     public static LoadedFont getFontBySize(float size) {
         for(LoadedFont f : loadedFonts) {
             if (size == f.getFontSize()) {
@@ -171,9 +156,5 @@ public class UIFontLoader {
             }
         }
         return false;
-    }
-
-    public static STBTTBakedChar.Buffer getCharData() {
-        return cdata;
     }
 }

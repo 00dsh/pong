@@ -122,6 +122,14 @@ public class GameObject {
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 	}
 
+	public float width() {
+		return this.size.x;
+	}
+
+	public float height() {
+		return this.size.y;
+	}
+
 	/**
 	 * @param width  The width to give to the {@code GameObject}.
 	 * @param height The height to give to the {@code GameObject}.
@@ -131,6 +139,52 @@ public class GameObject {
 	public void setSize(float width, float height) {
 		size.x = width;
 		size.y = height;
+	}
+
+	/**
+	 * @return The x position of the {@code GameObject}.
+	 */
+
+	public float x() {
+		return this.pos.x;
+	}
+
+	/**
+	 * @return The y position of the {@code GameObject}.
+	 */
+
+	public float y() {
+		return this.pos.y;
+	}
+
+	/**
+	 * Retains the x position of the object.
+	 * @param add The amount to increment the x position of the {@code GameObject}.
+	 */
+
+	public void addToX(float add) {
+		this.pos.x += add;
+	}
+
+	/**
+	 * Retains the y position of the object.
+	 * @param add The amount to increment the y position of the {@code GameObject}.
+	 */
+
+	public void addToY(float add) {
+		this.pos.y += add;
+	}
+
+	/**
+	 * This method retains the current position and increments it via the given parameters.
+	 *
+	 * @param x The amount to increment the x position of the {@code GameObject}.
+	 * @param y The amount to increment the y position of the {@code GameObject}.
+	 */
+
+	public void addPos(float x, float y) {
+		this.pos.x += x;
+		this.pos.y += y;
 	}
 
 	/**

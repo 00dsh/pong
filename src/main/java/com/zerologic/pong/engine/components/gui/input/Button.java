@@ -1,22 +1,58 @@
 package com.zerologic.pong.engine.components.gui.input;
 
 import static org.lwjgl.opengl.GL33.*;
+
+import static org.lwjgl.glfw.GLFW.*;
+
+import com.zerologic.pong.Game;
+import com.zerologic.pong.engine.components.Renderer;
 import com.zerologic.pong.engine.components.gui.uitext.UIText;
-import org.joml.Vector4f;
+import org.joml.*;
 
 public class Button {
-    //TODO: create a button class that draws a filled rectangle with text in the centre
 
     private int VAO, VBO, EBO;
 
     private UIText text;
     private Vector4f dim; // xpos, ypos, width, height (xyzw)
 
+    private float[] mousePos = Game.getMousePosReference();
+
+    // Initialize with empty lambda functions
+    private Runnable rEnter = (() -> {});
+    private Runnable rExit = (() -> {});
+    private Runnable rMouseDown = (() -> {});
+    private Runnable rMouseUp = (() -> {});
+
+    // Booleans to control mouse inputs
+    private boolean hovered = false;
+    private boolean executed = false;
+    private boolean clicked = false;
+
+    private Vector4f color;
+    private Vector4f hoverColor;
+    private Vector4f clickColor;
+
+    private Vector4f currentColor;
+
     public Button() { this("No text", 50f, 0f, 0f); }
 
-    public Button(String text, float fontSize, float xpos, float ypos) {
-        this.text = new UIText(text, fontSize, xpos, ypos);
-        this.dim = new Vector4f(xpos, ypos, this.text.width(), fontSize);
+    public Button(String text, float fontSize) {
+        this(text, fontSize, 0f, 0f);
+    }
+
+    public Button(String text, float fontSize, float x, float y) {
+        this.text = new UIText(text, fontSize, x, y);
+        this.dim = new Vector4f(x, y, this.text.width(), fontSize);
+        this.text.setPos((x + this.text.width() / 2f) - this.text.width() / 2f, y + this.text.height() / 2f - this.text.height() / 2f);
+
+        this.color = new Vector4f(0f, 0f, 0f, 1f); // Idle color of button
+        this.hoverColor = new Vector4f(1f, 1f, 1f, 1f); // Hovered color
+        this.clickColor = new Vector4f(1f, 0f, 0f, 1f); // Clicked color
+
+        this.currentColor = color;
+
+        this.text.setColor(currentColor);
 
         init();
     }
@@ -31,8 +67,7 @@ public class Button {
         };
 
         int[] indices = {
-                0, 1, 3,
-                1, 2, 3
+                0, 1, 2, 3, 1, 2, 0, 3
         };
 
         this.VAO = glGenVertexArrays();
@@ -49,6 +84,8 @@ public class Button {
         glVertexAttribPointer(0, 4, GL_FLOAT, false, 16, 0);
         glEnableVertexAttribArray(0);
 
+        glLineWidth(2f);
+
         // Cleanup
         glBindVertexArray(0);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -56,22 +93,129 @@ public class Button {
     }
 
     public void draw() {
-        glBindVertexArray(this.VAO);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-        text.draw();
+        update();
+        Game.getShaderProgram().use();
+        glBindVertexArray(VAO);
+        glDrawElements(GL_LINES, 8, GL_UNSIGNED_INT, 0);
+        Renderer.draw(text);
+        Game.getShaderProgram().use();
     }
 
-    public float x() {
-        return this.dim.x;
+    private void update() {
+        if(hovered && glfwGetMouseButton(Game.getWindow(), 0) == GLFW_PRESS) {
+            if(clicked)
+                return;
+
+            mouseDownFunc();
+            clicked = true;
+        }
+
+        if(clicked && hovered && glfwGetMouseButton(Game.getWindow(), 0) == GLFW_RELEASE) {
+            mouseUpFunc();
+            clicked = false;
+        }
+
+        if(mousePos[0] >= x() && mousePos[0] <= x() + width() &&
+                mousePos[1] >= y() && mousePos[1] <= y() + height()) {
+            if(hovered) {
+                return;
+            }
+
+            enterFunc();
+            setHovered(true);
+            executed = false;
+        } else {
+            if(!executed && hovered) {
+                exitFunc();
+                executed = true;
+            }
+            setHovered(false);
+        }
     }
 
-    public float y() {
-        return this.dim.y;
+    // When we update the text component of the button, we need to ensure that the text color is update at the same time
+    // as the button to avoid weird effects
+    public void setColor(float r, float g, float b, float a) {
+        this.color = new Vector4f(r, g, b, a);
+    }
+
+    public void setHoverColor(float r, float g, float b, float a) {
+        this.hoverColor = new Vector4f(r, g, b, a);
+    }
+
+    public void setClickColor(float r, float g, float b, float a) {
+        this.clickColor = new Vector4f(r, g, b, a);
     }
 
     public void setPos(float x, float y) {
         this.dim.x = x;
         this.dim.y = y;
+        this.text.setPos(x, y);
     }
 
+    // Mouse events
+    protected void enterFunc() {
+        currentColor = hoverColor;
+        text.setColor(currentColor);
+        rEnter.run();
+    }
+
+    protected void exitFunc() {
+        currentColor = color;
+        text.setColor(currentColor);
+        rExit.run();
+    }
+
+    protected void mouseDownFunc() {
+        currentColor = clickColor;
+        text.setColor(currentColor);
+        rMouseDown.run();
+    }
+
+    protected void mouseUpFunc() {
+        currentColor = hoverColor;
+        text.setColor(currentColor);
+        rMouseUp.run();
+    }
+
+    public void onEnter(Runnable r) {
+        rEnter = r;
+    }
+
+    public void onExit(Runnable r) {
+        rExit = r;
+    }
+
+    public void onMouseDown(Runnable r) {
+        rMouseDown = r;
+    }
+
+    public void onMouseUp(Runnable r) {
+        rMouseUp = r;
+    }
+
+    // Accessors
+    public String text() {
+        return this.text.text();
+    }
+
+    public float x() {
+        return dim.x;
+    }
+
+    public float y() {
+        return dim.y;
+    }
+
+    public float width() {
+        return dim.z();
+    }
+
+    public float height() {
+        return dim.w();
+    }
+
+    public void setHovered(boolean hovered) {
+        this.hovered = hovered;
+    }
 }

@@ -12,8 +12,6 @@ import static org.lwjgl.stb.STBTruetype.*;
 import java.nio.FloatBuffer;
 import java.util.Vector;
 
-// TODO: Get the true dimensions of a text object, current method inaccurate
-
 public class UIText {
 
     private String text;
@@ -22,12 +20,11 @@ public class UIText {
     private final FloatBuffer y = BufferUtils.createFloatBuffer(1);
     private final Vector<STBTTAlignedQuad> bakedChars = new Vector<>();
 
-    // X and Y of the actual quad
-    private final Vector2f pos;
-    private float fontSize;
-
-    private Vector2f size;
+    private Vector2f pos; // X and Y of the actual quad
+    private Vector2f size; // Width and height of the object
     private Vector4f color; // RGBA
+
+    private float fontSize;
 
     private int VAO, VBO, EBO;
 
@@ -36,36 +33,29 @@ public class UIText {
         1, 2, 3
     };
 
-    // Used to set position explicitly after creating
-    public UIText(String text, float fontSize) {
-        this.text = text;
-        this.fontSize = fontSize;
-        this.pos = new Vector2f(0f, 0f); // Set pos
-        this.color = new Vector4f(0.0f, 0.0f, 0.0f, 1.0f); // Set font color to black by default
-
-        init(); // Call initialize method from constructor
-    }
-
-    public UIText(String text, float fontSize, float x, float y) {
-        this.text = text;
-        this.fontSize = fontSize;
-        this.pos = new Vector2f(x, y); // Set pos
-        this.color = new Vector4f(0.0f, 0.0f, 0.0f, 1.0f); // Set font color to black by default
-
-        init(); // Call initialize method from constructor
+    public UIText(int text, float fontSize) {
+        this(Integer.toString(text), fontSize, 0f, 0f);
     }
 
     public UIText(int text, float fontSize, float x, float y) {
-        this.text = Integer.toString(text);
-        this.fontSize = fontSize;
-        this.pos = new Vector2f(x, y); // Set pos
-        this.color = new Vector4f(0.0f, 0.0f, 0.0f, 1.0f); // Set font color to black by default
+        this(Integer.toString(text), fontSize, x, y);
+    }
 
-        init(); // Call initialize method from constructor
+    public UIText(float text, float fontSize) {
+        this(Float.toString(text), fontSize, 0f, 0f);
     }
 
     public UIText(float text, float fontSize, float x, float y) {
-        this.text = Float.toString(text);
+        this(Float.toString(text), fontSize, x, y);
+    }
+
+    public UIText(String text, float fontSize) {
+        this(text, fontSize, 0f, 0f);
+    }
+
+    // Super constructor
+    public UIText(String text, float fontSize, float x, float y) {
+        this.text = text;
         this.fontSize = fontSize;
         this.pos = new Vector2f(x, y); // Set pos
         this.color = new Vector4f(0.0f, 0.0f, 0.0f, 1.0f); // Set font color to black by default
@@ -84,8 +74,6 @@ public class UIText {
         bakedChars.clear();
         resetPosBuffers();
 
-        int newLineMul = 1;
-
         // Create baked chars for each of the characters in the string
         for (int i = 0; i < text.length(); i++) {
 
@@ -93,7 +81,6 @@ public class UIText {
             if (text.charAt(i)=='\n') {
                 // Virtual cursor positions
                 // float vCursorX = this.x.get(0);
-                newLineMul++;
                 float vCursorY = this.y.get(0);
                 this.putPosBuffer(0f, getNewlineYOff(vCursorY)); // Put these 2 values in the x and y pos buffers respectively
                 continue;
@@ -105,8 +92,20 @@ public class UIText {
             bakedChars.add(q);
         }
 
-        // Not 100% accurate as the last element could be a char after a newline
-        size = new Vector2f(bakedChars.lastElement().x1(), fontSize * newLineMul);
+        // Get the true width and height of the text object
+        float maxWidth = 0f;
+        float maxHeight = 0f;
+        for (STBTTAlignedQuad q : bakedChars) {
+            if (q.x1() > maxWidth) {
+                maxWidth = q.x1();
+            }
+
+            if (q.y1() > maxHeight) {
+                maxHeight = q.y1();
+            }
+        }
+
+        size = new Vector2f(maxWidth, maxHeight);
 
         VAO = glGenVertexArrays();
         glBindVertexArray(VAO);
@@ -179,16 +178,12 @@ public class UIText {
         if (!(this.color.x == r && this.color.y == g && this.color.z == b && this.color.w == a))
         {
             this.color = new Vector4f(r, g, b, a);
-            UIFontLoader.getShaderProgram().use();
-            UIFontLoader.getShaderProgram().setVector4f(this.color, "color");
         }
     }
 
     public void setColor(Vector4f color) {
         if(!color.equals(this.color)) {
             this.color = color;
-            UIFontLoader.getShaderProgram().use();
-            UIFontLoader.getShaderProgram().setVector4f(this.color, "color");
         }
     }
 
@@ -201,7 +196,7 @@ public class UIText {
     }
 
     public float width() {
-        return this.size.x + 3f; // Add padding to the right of 3 pixels
+        return this.size.x;
     }
 
     public float height() {
