@@ -11,7 +11,7 @@ public class Renderer {
 
 	public static void draw(Button button) {
 		Game.getShaderProgram().use();
-		model.translation(new Vector3f(button.x(), button.y(), 0.0f));
+		model.translation(button.x(), button.y(), 0.0f);
 
 		Game.getShaderProgram().setModel(model);
 		Game.getShaderProgram().updateModel();

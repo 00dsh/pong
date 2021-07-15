@@ -154,30 +154,30 @@ public class UIText {
     }
 
     private void resetPosBuffers() {
-        this.x.position(0);
-        this.x.put(0);
-        this.x.flip();
+        x.position(0);
+        x.put(0);
+        x.flip();
 
-        this.y.position(0);
-        this.y.put(UIFontLoader.getFontBySize(fontSize).ascent() * UIFontLoader.getFontBySize(fontSize).scale());
-        this.y.flip();
+        y.position(0);
+        y.put(UIFontLoader.getFontBySize(fontSize).ascent() * UIFontLoader.getFontBySize(fontSize).scale());
+        y.flip();
     }
 
     private void putPosBuffer(float xpos, float ypos) {
-        this.x.position(0);
-        this.x.put(xpos);
-        this.x.flip();
+        x.position(0);
+        x.put(xpos);
+        x.flip();
 
-        this.y.position(0);
-        this.y.put(ypos);
-        this.y.flip();
+        y.position(0);
+        y.put(ypos);
+        y.flip();
     }
 
     public void setColor(float r, float g, float b, float a) {
         // Check if color isn't the same as current so no need to create a new vec every time
-        if (!(this.color.x == r && this.color.y == g && this.color.z == b && this.color.w == a))
+        if (!(color.x == r && color.y == g && color.z == b && color.w == a))
         {
-            this.color = new Vector4f(r, g, b, a);
+            color = new Vector4f(r, g, b, a);
         }
     }
 
@@ -188,19 +188,19 @@ public class UIText {
     }
 
     public float x() {
-        return this.pos.x;
+        return pos.x;
     }
 
     public float y() {
-        return this.pos.y;
+        return pos.y;
     }
 
     public float width() {
-        return this.size.x;
+        return size.x;
     }
 
     public float height() {
-        return this.size.y;
+        return size.y;
     }
 
     public Vector2f pos() {
@@ -208,8 +208,8 @@ public class UIText {
     }
 
     public void setPos(float x, float y) {
-        this.pos.x = x;
-        this.pos.y = y;
+        pos.x = x;
+        pos.y = y;
     }
 
     public String text() {
@@ -218,15 +218,15 @@ public class UIText {
 
     // Now extremely efficient/lightweight in most cases
     public void setText(String value) {
-        if (!value.equals(this.text)) {
-            this.text = value;
+        if (!value.equals(text)) {
+            text = value;
             init();
         }
     }
 
     public void setText(int value) {
-        if (!Integer.toString(value).equals(this.text)) {
-            this.text = Integer.toString(value);
+        if (!Integer.toString(value).equals(text)) {
+            text = Integer.toString(value);
             init();
         }
     }

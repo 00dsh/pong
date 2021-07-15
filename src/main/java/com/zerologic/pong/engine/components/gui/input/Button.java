@@ -6,6 +6,7 @@ import static org.lwjgl.glfw.GLFW.*;
 
 import com.zerologic.pong.Game;
 import com.zerologic.pong.engine.components.Renderer;
+import com.zerologic.pong.engine.components.gui.uitext.UIFontLoader;
 import com.zerologic.pong.engine.components.gui.uitext.UIText;
 import org.joml.*;
 
@@ -70,21 +71,21 @@ public class Button {
                 0, 1, 2, 3, 1, 2, 0, 3
         };
 
-        this.VAO = glGenVertexArrays();
-        glBindVertexArray(this.VAO);
+        VAO = glGenVertexArrays();
+        glBindVertexArray(VAO);
 
-        this.VBO = glGenBuffers();
+        VBO = glGenBuffers();
         glBindBuffer(GL_ARRAY_BUFFER, this.VBO);
         glBufferData(GL_ARRAY_BUFFER, data, GL_STATIC_DRAW);
 
-        this.EBO = glGenBuffers();
+        EBO = glGenBuffers();
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this.EBO);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices, GL_STATIC_DRAW);
 
         glVertexAttribPointer(0, 4, GL_FLOAT, false, 16, 0);
         glEnableVertexAttribArray(0);
 
-        glLineWidth(2f);
+        glLineWidth(1f);
 
         // Cleanup
         glBindVertexArray(0);
@@ -92,13 +93,13 @@ public class Button {
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
 
+    // Use renderer draw calls before doing any raw drawing
     public void draw() {
-        update();
-        Game.getShaderProgram().use();
-        glBindVertexArray(VAO);
-        glDrawElements(GL_LINES, 8, GL_UNSIGNED_INT, 0);
         Renderer.draw(text);
-        Game.getShaderProgram().use();
+
+        update();
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_LINES, 0, 8);
     }
 
     private void update() {
