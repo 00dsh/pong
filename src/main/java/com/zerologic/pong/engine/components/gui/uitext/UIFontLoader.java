@@ -29,11 +29,11 @@ public class UIFontLoader {
     private static final Vector<LoadedFont> loadedFonts = new Vector<>();
 
     // Returns true on successful font load
-    protected static boolean generateBitmap(float size) {
+    protected static void generateBitmap(float size) {
         float fontHeight = size;
 
         if(checkFontExists(fontHeight)) {
-            return true;
+            return;
         }
 
         if(fontHeight < 0) {
@@ -44,7 +44,7 @@ public class UIFontLoader {
         fontInfo = STBTTFontinfo.create();
 
         if(!stbtt_InitFont(fontInfo, data)) {
-            return false;
+            return;
         }
 
         IntBuffer bAscent = BufferUtils.createIntBuffer(1);
@@ -87,7 +87,6 @@ public class UIFontLoader {
         data.clear();
         bitmap.clear();
 
-        return true;
     }
 
     // Defaults to 1024 if no size is specified.. no guarantee the font fits on the bitmap!

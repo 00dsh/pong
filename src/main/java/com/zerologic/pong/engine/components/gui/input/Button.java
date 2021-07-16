@@ -6,7 +6,6 @@ import static org.lwjgl.glfw.GLFW.*;
 
 import com.zerologic.pong.Game;
 import com.zerologic.pong.engine.components.Renderer;
-import com.zerologic.pong.engine.components.gui.uitext.UIFontLoader;
 import com.zerologic.pong.engine.components.gui.uitext.UIText;
 import org.joml.*;
 
@@ -14,10 +13,12 @@ public class Button {
 
     private int VAO, VBO, EBO;
 
-    private UIText text;
-    private Vector4f dim; // xpos, ypos, width, height (xyzw)
+    private final UIText text;
+    private final Vector4f dim; // xpos, ypos, width, height (xyzw)
 
-    private float[] mousePos = Game.getMousePosReference();
+    private final float[] mousePos = Game.getMousePosReference();
+
+    private boolean drawBorder = false;
 
     // Initialize with empty lambda functions
     private Runnable rEnter = (() -> {});
@@ -98,8 +99,10 @@ public class Button {
         Renderer.draw(text);
 
         update();
-        glBindVertexArray(VAO);
-        glDrawArrays(GL_LINES, 0, 8);
+        if(drawBorder) {
+            glBindVertexArray(VAO);
+            glDrawArrays(GL_LINES, 0, 8);
+        }
     }
 
     private void update() {
@@ -138,6 +141,7 @@ public class Button {
     // as the button to avoid weird effects
     public void setColor(float r, float g, float b, float a) {
         this.color = new Vector4f(r, g, b, a);
+        text.setColor(r, g, b, a);
     }
 
     public void setHoverColor(float r, float g, float b, float a) {
@@ -218,5 +222,9 @@ public class Button {
 
     public void setHovered(boolean hovered) {
         this.hovered = hovered;
+    }
+
+    public void drawBorder(boolean draw) {
+        this.drawBorder = draw;
     }
 }

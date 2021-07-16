@@ -11,7 +11,6 @@ import com.zerologic.pong.engine.components.gui.uitext.UIText;
 
 import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.opengl.*;
-
 import static org.lwjgl.opengl.GL46.*;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.system.MemoryUtil.*;
@@ -20,7 +19,7 @@ import java.util.Random;
 
 /**
  * @author Dilan Shabani
- * @version 0.8a
+ * @version 1.0
  * @since 12/2/2020
  */
 
@@ -42,18 +41,14 @@ public class Game {
 	private static ShaderProgram program;
 	private static ShaderProgram textShader;
 
-	private int debugCounter = 0;
-	private boolean debug = false;
-	private boolean debugFPS = false;
-	
 	// Mouse position vector
 	private final static float[] mousePos = new float[2];
 
 	// Menu objects
+	private GameObject logo;
 	private Button playBtn;
 	private Button quitBtn;
-
-	private GameObject logo;
+	private Button resetBtn;
 
 	// Game objects
 	private GameObject paddle1;
@@ -66,9 +61,6 @@ public class Game {
 	private UIText pauseText;
 	private UIText ownership;
 
-	// Debug objects
-	private UIText debugText;
-
 	// Game attributes
 	private float paddle1Speed = 1000f;
 	private float paddle2Speed = 1000f;
@@ -80,8 +72,7 @@ public class Game {
 	private float ballIncSpeed = 50.0f;
 	private float ballAngle = 45.0f;
 
-	private int ballIncAngle;
-	private final int maxRandomAngle = 30;
+	private final int maxRandomAngle = 45;
 
 	private float origBallSpeed = ballSpeed; // Purpose is to reset the speed to the same if someone loses a point.
 	
@@ -149,28 +140,6 @@ public class Game {
 					glfwSetWindowPos(window, (int)(monitorWidth/2 - win_width/2), (int)(monitorHeight/2 - win_height/2));
 				}
 			}
-
-			// Debug actions
-			if (debug) {
-				if (key == GLFW_KEY_P && action == GLFW_PRESS) {
-					debugFPS = !debugFPS;
-				}
-			}
-
-			// Used to enable debug mode
-			if (key == GLFW_KEY_GRAVE_ACCENT && action == GLFW_PRESS) {
-				if(!debug)
-					debugCounter++;
-				else
-					debugCounter--;
-
-				if (debugCounter == 3) {
-					debug = true;
-				} else if (debugCounter == 0) {
-					debug = false;
-				}
-			}
-
 		});
 		
 		// Mouse cursor position callback
@@ -187,6 +156,11 @@ public class Game {
 			// Auto resize of objects from callback
 			// Auto set menu
 			logo.setPos(win_width / 2 - logo.width() / 2, 100);
+
+			playBtn.setPos(win_width / 2f - playBtn.width() / 2f, win_height / 2f - playBtn.height() / 2f);
+			quitBtn.setPos(win_width / 2f - quitBtn.width() / 2f, playBtn.y() + playBtn.height() + 20f);
+			resetBtn.setPos(win_width / 2f - resetBtn.width() / 2f, quitBtn.y() - resetBtn.height() - 20f);
+
 			ownership.setPos(5, win_height - ownership.height());
 			pauseText.setPos(win_width / 2 - pauseText.width() / 2, (win_height / 2) - 100f - pauseText.height() / 2);
 
@@ -220,13 +194,28 @@ public class Game {
 
 		playBtn = new Button("Play", 51f);
 		playBtn.setPos(win_width / 2f - playBtn.width() / 2f, win_height / 2f - playBtn.height() / 2f);
-		playBtn.setHoverColor(0f, 1f, 0f, 1f);
+		playBtn.setColor(1f, 1f, 1f, 1f);
+		playBtn.setHoverColor(1f, 0f, 0f, 1f);
 		playBtn.onMouseUp(() -> state = GAMESTATE.ACTIVE);
+		playBtn.setClickColor(0f, 0f, 1f, 1f);
 
 		quitBtn = new Button("Quit", 51f);
-		quitBtn.setPos(playBtn.x(), playBtn.y() + playBtn.height() + 20f);
+		quitBtn.setPos(win_width / 2f - quitBtn.width() / 2f, playBtn.y() + playBtn.height() + 20f);
+		quitBtn.setColor(1f, 1f, 1f, 1f);
 		quitBtn.onMouseUp(() -> glfwSetWindowShouldClose(window, true));
-		quitBtn.setHoverColor(0f, 1f, 0f, 1f);
+		quitBtn.setHoverColor(1f, 0f, 0f, 1f);
+		quitBtn.setClickColor(0f, 0f, 1f, 1f);
+
+		resetBtn = new Button("Restart", 51f);
+		resetBtn.setPos(win_width / 2f - resetBtn.width() / 2f, quitBtn.y() - resetBtn.height() - 20f);
+		resetBtn.setColor(1f, 1f, 1f, 1f);
+		resetBtn.setHoverColor(1f, 0f, 0f, 1f);
+		resetBtn.setClickColor(0f, 0f, 1f, 1f);
+		resetBtn.onMouseUp(() -> {
+			pts_p1 = 0;
+			pts_p2 = 0;
+			state = GAMESTATE.ACTIVE;
+		});
 
 		pauseText = new UIText("Game Paused", 70f);
 		pauseText.setColor(1f, 1f, 1f, 1f);
@@ -253,23 +242,12 @@ public class Game {
 		text_pts_p2.setColor(1f, 1f, 1f, 1f);
 		text_pts_p2.setPos(win_width - text_pts_p2.width(), 0);
 
-		// Debug components
-		debugText = new UIText(
-				"mouse pos (x, y): " + mousePos[0] + ", " + mousePos[1] + "\n" +
-				"delta time: " + Time.deltaTimef() + "\n" +
-				"ball speed: " + ballSpeed + "\n" +
-				"ball pos (x, y): " + ball.x() + ", " + ball.y() + "\n" +
-				"paddle1 pos(y): " + paddle1.y() + "\n" +
-				"paddle2 pos(y): " + paddle2.y()
-				, 20f);
-		debugText.setPos(0f, win_height - debugText.height());
-
 		glfwShowWindow(window);
 	}
 
 	// Game loop
 	void loop() {
-		glClearColor(0.2f, 0.2f, 0.4f, 1.0f);
+		//glClearColor(0.2f, 0.2f, 0.4f, 1.0f);
 
 		while (!glfwWindowShouldClose(window)) {
 			glClear(GL_COLOR_BUFFER_BIT);
@@ -284,30 +262,6 @@ public class Game {
 				case ACTIVE -> drawGame();
 				case PAUSED -> drawPause();
 				case PLAYER_WIN -> drawWin();
-			}
-
-			// Buggy, causes game to slow down but obviously debugging isn't meant to be enabled for regular gameplay
-			// Use at your own peril
-			if(debug) {
-				Renderer.draw(debugText);
-
-				if(debugFPS) {
-					debugText.setText(
-							"mouse pos (x, y): " + (int) mousePos[0] + ", " + (int) mousePos[1] + "\n" +
-									"delta time: " + (int)Time.deltaTimef() + "\n" +
-									"ball speed: " + (int)ballSpeed + "\n" +
-									"ball pos (x, y) press P to disable: " + (int)ball.x() + ", " + (int)ball.y() + "\n" +
-									"paddle1 pos(y): " + (int)paddle1.y() + "\n" +
-									"paddle2 pos(y): " + (int)paddle2.y());
-				} else {
-					debugText.setText(
-							"mouse pos (x, y): " + (int) mousePos[0] + ", " + (int) mousePos[1] + "\n" +
-									"delta time: " + (int)Time.deltaTimef() + "\n" +
-									"ball speed: " + (int)ballSpeed + "\n" +
-									"ball pos: (disabled, press P to enable) \n" +
-									"paddle1 pos(y): " + (int)paddle1.y() + "\n" +
-									"paddle2 pos(y): " + (int)paddle2.y());
-				}
 			}
 
 			Time.calcTime();
@@ -396,15 +350,18 @@ public class Game {
 			playerWon.setColor(1f, 1f, 1f, 1f);
 			Renderer.draw(playerWon);
 		}
+
+		Renderer.draw(resetBtn);
+		Renderer.draw(quitBtn);
 	}
 	
 	void checkBall() {
 		
 		// Check direction of ball via an integer value
 		if (ballDirection == 0) {
-			ball.addPos(-ballSpeed * Time.deltaTimef(), (float)Math.cos(ballAngle) * 500 * Time.deltaTimef());
+			ball.addPos(-ballSpeed * Time.deltaTimef(), (float)Math.cos(ballAngle) * 500f * Time.deltaTimef());
 		} else if (ballDirection == 1) {
-			ball.addPos(ballSpeed * Time.deltaTimef(), (float)Math.cos(ballAngle) * 500 * Time.deltaTimef());
+			ball.addPos(ballSpeed * Time.deltaTimef(), (float)Math.cos(ballAngle) * 500f * Time.deltaTimef());
 		}
 
 		// Ball dynamics
@@ -417,7 +374,9 @@ public class Game {
 			ballAngle += 180;
 			ball.setPos(ball.x(), win_height - ball.height());
 		}
-	
+
+		int ballIncAngle;
+
 		if(checkCollision(ball, paddle1)) {
 			ballIncAngle = random.nextInt(maxRandomAngle);
 			ballAngle += ballIncAngle;

@@ -2,7 +2,6 @@ package com.zerologic.pong.engine.components;
 
 import static org.lwjgl.opengl.GL46.*;
 
-import com.zerologic.pong.Game;
 import org.joml.Vector2f;
 import com.zerologic.pong.engine.Texture;
 
