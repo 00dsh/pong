@@ -4,4 +4,4 @@ As simple as it gets, re-written in Java and powered by OpenGL, this was a small
 
 A side note, this project is no longer developed, so the methods I have used for rendering/using certain elements of the engine may be extremely unoptimized in certain use cases, so please do some research before using my code! (Or just update it lol).
 
--Logiiq
+-dsh
